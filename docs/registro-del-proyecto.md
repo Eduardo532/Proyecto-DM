@@ -12,6 +12,7 @@ Registro vivo pedido en la sección 21 del prompt maestro. Se actualiza en cada 
 | Fecha | Funcionalidad | Verificación |
 |---|---|---|
 | 2026-11-10 | Documento de análisis y diseño (24 puntos) en `docs/diseno/` | Revisión de documentos |
+| 2026-11-10 | Backend base: FastAPI, configuración, SQLite (WAL + claves foráneas), Alembic, `/api/health`, CI en Ubuntu y Windows | CI del PR (ver PR de la Fase 1) — pendiente de tu prueba local |
 
 ## Funcionalidades pendientes
 
@@ -41,5 +42,6 @@ Ninguno (no hay código).
 
 ## Próxima tarea
 
-1. Fase 1, primer PR: estructura del repositorio, CI (Windows y Linux) y backend base (issues #10 y #11).
-2. Pendiente de ti: memoria de la tarjeta gráfica (VRAM) para fijar el modelo por defecto.
+1. Que pruebes el backend en tu equipo siguiendo `docs/desarrollo.md` y confirmes (issues #10 y #11).
+2. Siguiente PR: frontend base (issue #12).
+3. Pendiente de ti: memoria RAM del equipo (decide si `qwen3.5:4b` es viable como opción de calidad).
