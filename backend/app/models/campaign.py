@@ -90,7 +90,9 @@ class CharacterChange(Base):
     __tablename__ = "character_change"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
-    character_id: Mapped[str] = mapped_column(ForeignKey("character.id", ondelete="CASCADE"), nullable=False, index=True)
+    character_id: Mapped[str] = mapped_column(
+        ForeignKey("character.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     event_id: Mapped[str | None] = mapped_column(ForeignKey("event.id", ondelete="SET NULL"))
     field: Mapped[str] = mapped_column(String(60), nullable=False)
     before: Mapped[Any] = mapped_column(JSON)

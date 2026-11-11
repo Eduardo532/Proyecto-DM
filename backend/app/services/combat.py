@@ -23,7 +23,9 @@ def active_combat(db: Session, campaign_id: str) -> Combat | None:
 
 
 def _tracker(combat: Combat) -> EncounterTracker:
-    order = [Combatant(c["entity_id"], c["name"], c["initiative"], c["dex_modifier"], c["speed_ft"]) for c in combat.order]
+    order = [
+        Combatant(c["entity_id"], c["name"], c["initiative"], c["dex_modifier"], c["speed_ft"]) for c in combat.order
+    ]
     budgets = {k: TurnBudget(**v) for k, v in combat.budgets.items()}
     return EncounterTracker(order, combat.round, combat.turn_index, budgets, set(combat.removed))
 

@@ -240,7 +240,8 @@ def move_entity(
     update_fog(db, game_map)
     append_event(
         db, entity.campaign_id, "entity_moved",
-        {"entity_id": entity.id, "name": entity.name if entity.kind == "character" else entity.name_public or entity.name,
+        {"entity_id": entity.id,
+         "name": entity.name if entity.kind == "character" else entity.name_public or entity.name,
          "to": cell_label(target), "x": x, "y": y, "cost_ft": cost},
         actor_kind=actor_kind, session_id=session_id, visibility="dm" if entity.hidden else "public",
     )  # fmt: skip

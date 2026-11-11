@@ -113,7 +113,8 @@ def record_changes(
         db,
         character.campaign_id,
         event_type,
-        {**payload, "character_id": character.id, "name": character.name, "changes": {k: v[1] for k, v in changed.items()}},
+        {**payload, "character_id": character.id, "name": character.name,
+         "changes": {k: v[1] for k, v in changed.items()}},
         actor_kind=actor_kind,
         session_id=session_id,
     )
