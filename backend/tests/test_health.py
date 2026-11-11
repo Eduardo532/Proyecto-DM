@@ -11,7 +11,7 @@ def test_health_confirma_servidor_y_base_de_datos(client: TestClient) -> None:
     assert response.json() == {
         "status": "ok",
         "version": __version__,
-        "database": {"journal_mode": "wal", "foreign_keys": True, "schema_revision": "0001"},
+        "database": {"journal_mode": "wal", "foreign_keys": True, "schema_revision": "0002"},
     }
 
 

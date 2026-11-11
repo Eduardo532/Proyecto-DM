@@ -74,7 +74,7 @@ def roll_modifiers_from_conditions(
     is_check = kind in {"ability", "skill", "initiative"}
     if kind == "attack":
         if conditions & {Condition.BLINDED, Condition.FRIGHTENED, Condition.POISONED,
-                         Condition.PRONE, Condition.RESTRAINED}:  # fmt: skip
+                         Condition.PRONE, Condition.RESTRAINED}:
             sources.append(Advantage.DISADVANTAGE)
         if Condition.INVISIBLE in conditions:
             sources.append(Advantage.ADVANTAGE)
