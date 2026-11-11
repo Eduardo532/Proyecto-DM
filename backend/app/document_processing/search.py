@@ -83,7 +83,7 @@ def search(
                 )
             ).all()
             if candidates:
-                matrix = np.vstack([np.frombuffer(c[1], dtype=np.float32) for c in candidates])
+                matrix = np.vstack([np.frombuffer(c[1] or b"", dtype=np.float32) for c in candidates])
                 if matrix.shape[1] == vector.shape[0]:
                     scores = matrix @ vector
                     for position, index in enumerate(np.argsort(-scores)[:40]):

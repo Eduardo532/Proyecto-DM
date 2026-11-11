@@ -9,7 +9,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import pymupdf
+import pymupdf as _pymupdf_module
+
+# PyMuPDF solo está tipado en parte: se trata como Any para no ocultar errores reales con ignores.
+pymupdf: Any = _pymupdf_module
 
 log = logging.getLogger("vdm.pdf")
 
@@ -78,10 +81,11 @@ def _page_dict(page: Any, extraction: Extraction, index: int) -> dict[str, Any]:
 
 def extract(path: Path, assets_dir: Path, min_image_px: int = 200) -> Extraction:
     assets_dir.mkdir(parents=True, exist_ok=True)
-    doc = pymupdf.open(path)
+    doc: Any = pymupdf.open(path)
     extraction = Extraction(page_count=doc.page_count)
     sizes: Counter[float] = Counter()
     seen_xrefs: set[int] = set()
+    page: Any
     for index, page in enumerate(doc):
         boxes = _filled_rects(page)
         data = _page_dict(page, extraction, index)
