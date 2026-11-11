@@ -7,6 +7,7 @@ Etiqueta visible: columna en letras y fila en número, p. ej. ``C7``.
 from __future__ import annotations
 
 import heapq
+from itertools import pairwise
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -154,7 +155,7 @@ def path_cost(grid: Grid, path: Iterable[Cell], occupancy: Occupancy | None = No
         return 0
     total = 0
     diagonals = 0
-    for frm, to in zip(cells, cells[1:], strict=False):
+    for frm, to in pairwise(cells):
         if max(abs(frm[0] - to[0]), abs(frm[1] - to[1])) != 1:
             raise RuleViolation(f"El camino salta de {cell_label(frm)} a {cell_label(to)}.")
         if grid.blocks_movement(to) or grid._corner_cut(frm, to):

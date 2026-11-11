@@ -83,10 +83,9 @@ def visible_cells(grid: Grid, viewer: Viewer, lights: dict[Cell, Light]) -> set[
             cell = (x, y)
             if cell == viewer.cell or not has_line_of_sight(grid, viewer.cell, cell):
                 continue
-            light = lights.get(cell, Light.DARK)
-            if light is Light.DARK:
-                if grid.distance_ft(viewer.cell, cell) > viewer.darkvision_ft:
-                    continue
+            is_dark = lights.get(cell, Light.DARK) is Light.DARK
+            if is_dark and grid.distance_ft(viewer.cell, cell) > viewer.darkvision_ft:
+                continue
             seen.add(cell)
     return seen
 
