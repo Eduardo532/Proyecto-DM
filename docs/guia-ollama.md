@@ -2,6 +2,8 @@
 
 La aplicación usa [Ollama](https://ollama.com) para ejecutar el modelo de lenguaje en tu propio equipo, sin claves de API ni costes por uso (decisión D-10).
 
+> **Con Docker (`./iniciar.sh`) no hace falta instalar Ollama:** se arranca en un contenedor y descarga los modelos solo. Esta guía sirve para elegir modelo o para usar Ollama sin Docker.
+
 ## 1. Equipo de referencia del proyecto
 
 | Componente | Valor |
@@ -9,7 +11,7 @@ La aplicación usa [Ollama](https://ollama.com) para ejecutar el modelo de lengu
 | Sistema | Linux |
 | GPU | NVIDIA con 4 GB de VRAM |
 | Disco | 700 GB libres (sobra: los modelos ocupan pocos GB) |
-| RAM | *pendiente de confirmar* |
+| RAM | 24 GB |
 
 Todo el diseño de la IA (fase 3) se prueba con este equipo como mínimo.
 
