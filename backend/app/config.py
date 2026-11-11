@@ -1,0 +1,54 @@
+"""Configuración de la aplicación.
+
+Los valores se leen, por orden de prioridad, de variables de entorno con el
+prefijo ``VDM_`` y del archivo ``backend/.env``. Ejemplo: ``VDM_PORT=8001``.
+"""
+
+from functools import lru_cache
+from pathlib import Path
+from typing import Literal
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+REPO_DIR = BACKEND_DIR.parent
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="VDM_",
+        env_file=BACKEND_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    app_name: str = "Virtual Dungeon Master"
+    environment: Literal["development", "test", "production"] = "development"
+
+    # Carpeta con la base de datos, los PDF, los mapas y las copias de seguridad.
+    # Está fuera del control de versiones (ver .gitignore).
+    data_dir: Path = REPO_DIR / "data"
+
+    # Si no se indica, se usa data_dir/vdm.sqlite3.
+    database_url: str | None = None
+
+    # Aplicar migraciones pendientes al arrancar el servidor.
+    auto_migrate: bool = True
+
+    # Orígenes permitidos para el frontend en desarrollo (Vite usa el 5173).
+    cors_origins: list[str] = Field(
+        default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
+    )
+
+    @property
+    def resolved_database_url(self) -> str:
+        if self.database_url:
+            return self.database_url
+        # as_posix() produce "C:/..." en Windows, que es lo que espera SQLAlchemy.
+        return f"sqlite:///{(self.data_dir / 'vdm.sqlite3').as_posix()}"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

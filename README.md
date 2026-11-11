@@ -36,6 +36,7 @@ Aplicación web local que usa inteligencia artificial para dirigir partidas de *
   9. [Memoria y continuidad](docs/diseno/09-memoria.md)
   10. [Pruebas, fases, riesgos y MVP](docs/diseno/10-pruebas-fases-riesgos-mvp.md)
   11. [Problemas detectados y preguntas abiertas](docs/diseno/11-problemas-y-preguntas-abiertas.md)
+- [Guía de desarrollo](docs/desarrollo.md): instalar, ejecutar y probar en Windows y Linux.
 - [Guía de Ollama](docs/guia-ollama.md): qué modelo usar según tu tarjeta gráfica e instalación.
 - [Registro del proyecto](docs/registro-del-proyecto.md): terminado, pendiente, errores, decisiones y próxima tarea.
 
