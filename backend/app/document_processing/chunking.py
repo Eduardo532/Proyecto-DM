@@ -32,7 +32,7 @@ class Section:
 
 def is_heading(block: Block, body_size: float) -> bool:
     text = block.text.strip()
-    if len(text) > 120 or "\n" in text.strip() and len(text.splitlines()) > 2:
+    if len(text) > 120 or len(text.strip().splitlines()) > 2:
         return False
     if block.size >= body_size + 1.5:
         return True
@@ -54,7 +54,7 @@ def build_pieces(blocks: list[Block], body_size: float) -> list[Piece]:
     buffer: list[Block] = []
 
     def section_name() -> str:
-        return " › ".join(title for _, title in path)
+        return " > ".join(title for _, title in path)
 
     def flush() -> None:
         nonlocal buffer

@@ -132,7 +132,7 @@ def _process(db: Session, document: Document, data_dir: Path, provider: LLMProvi
     for image in extraction.images:
         text = image.nearby_text.lower()
         is_map = image.page_coverage > 0.35 and any(w in text for w in MAP_WORDS)
-        is_map = is_map or image.page_coverage > 0.6 and min(image.width, image.height) > 600
+        is_map = is_map or (image.page_coverage > 0.6 and min(image.width, image.height) > 600)
         maps += int(is_map)
         db.add(DocumentAsset(document_id=document.id, campaign_id=document.campaign_id, page=image.page,
                              file_path=str(image.path), width=image.width, height=image.height,
