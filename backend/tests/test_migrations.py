@@ -18,10 +18,10 @@ def test_migraciones_suben_bajan_y_vuelven_a_subir(tmp_path: Path) -> None:
     url = f"sqlite:///{(tmp_path / 'migraciones.sqlite3').as_posix()}"
 
     upgrade_to_head(url)
-    assert {"alembic_version", "app_setting"} <= _tablas(url)
+    assert {"alembic_version", "app_setting", "campaign", "event", "chunk_fts"} <= _tablas(url)
 
     downgrade_to_base(url)
-    assert "app_setting" not in _tablas(url)
+    assert "app_setting" not in _tablas(url) and "chunk_fts" not in _tablas(url)
 
     upgrade_to_head(url)
     assert "app_setting" in _tablas(url)
@@ -39,7 +39,11 @@ def test_modelos_y_migraciones_coinciden(tmp_path: Path) -> None:
     engine = create_db_engine(url)
     try:
         with engine.connect() as conn:
-            diferencias = compare_metadata(MigrationContext.configure(conn), Base.metadata)
+            context = MigrationContext.configure(
+                conn,
+                opts={"include_name": lambda name, type_, _p: not (type_ == "table" and str(name).startswith("chunk_fts"))},
+            )
+            diferencias = compare_metadata(context, Base.metadata)
     finally:
         engine.dispose()
     assert diferencias == []

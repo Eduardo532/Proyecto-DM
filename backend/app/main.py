@@ -12,7 +12,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
-from app.api import health
+from app.ai.runtime import runtime
+from app.api import campaigns, characters, combat, health, play, world, ws
+from app.api.errors import install as install_error_handlers
 from app.config import Settings, get_settings
 from app.db import Database
 from app.migrations import upgrade_to_head
@@ -28,6 +30,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             upgrade_to_head(resolved.resolved_database_url)
         db = Database(resolved.resolved_database_url)
         app.state.db = db
+        runtime.configure(db, resolved)
         try:
             yield
         finally:
@@ -42,5 +45,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.include_router(health.router, prefix="/api")
+    install_error_handlers(app)
+    for module in (health, campaigns, characters, play, world, combat):
+        app.include_router(module.router, prefix="/api")
+    app.include_router(ws.router)
     return app
