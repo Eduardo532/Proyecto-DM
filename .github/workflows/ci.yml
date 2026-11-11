@@ -41,3 +41,43 @@ jobs:
 
       - name: Pruebas (pytest)
         run: python ../.github/scripts/run.py pytest pytest -q -p no:cacheprovider --tb=short
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Instalar dependencias
+        run: python3 ../.github/scripts/run.py npm npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Tipos (tsc)
+        run: python3 ../.github/scripts/run.py tsc npm run typecheck
+
+      - name: Pruebas (vitest)
+        run: python3 ../.github/scripts/run.py vitest npm test
+
+      - name: Compilar (vite)
+        run: python3 ../.github/scripts/run.py vite npm run build
+
+  docker:
+    name: Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Validar docker compose
+        run: python3 .github/scripts/run.py compose docker compose -f docker-compose.yml -f docker-compose.gpu.yml config -q
+
+      - name: Construir imagen
+        run: python3 .github/scripts/run.py build docker build -t virtual-dm:ci .
+
+      - name: Prueba de humo
+        run: python3 .github/scripts/run.py smoke bash .github/scripts/smoke.sh

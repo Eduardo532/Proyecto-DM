@@ -59,9 +59,17 @@ def start_session(campaign: CampaignDep, db: Db) -> GameSession:
 
 
 @router.patch("/campaigns/{campaign_id}/sessions/{session_id}", response_model=SessionOut)
-def update_session(campaign: CampaignDep, session_id: str, body: SessionUpdate, db: Db) -> GameSession:
+def update_session(campaign: CampaignDep, session_id: str, body: SessionUpdate, db: Db, dm: IsDm) -> GameSession:
     session = _session(db, campaign, session_id)
     fields = body.model_dump(exclude_unset=True)
+    if "ai_paused" in fields and body.ai_paused is not None:
+        if not dm:
+            from app.services.errors import Forbidden
+
+            raise Forbidden("Hace falta el modo DM para pausar la IA.")
+        session.ai_paused = body.ai_paused
+        append_event(db, campaign.id, "ai_paused" if body.ai_paused else "ai_resumed", {}, actor_kind="dm",
+                     session_id=session.id)
     if "active_player_id" in fields:
         player = db.get(Player, body.active_player_id) if body.active_player_id else None
         if body.active_player_id and (player is None or player.campaign_id != campaign.id):

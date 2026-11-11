@@ -22,6 +22,7 @@ class SessionOut(ORMModel):
 class SessionUpdate(BaseModel):
     active_player_id: str | None = None
     scene_id: str | None = None
+    ai_paused: bool | None = None
 
 
 class SessionClose(BaseModel):

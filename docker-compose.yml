@@ -1,0 +1,51 @@
+# Arranque completo: ./iniciar.sh (Linux) o iniciar.bat (Windows).
+# Manual: docker compose up -d --build   →   http://localhost:8000
+name: virtual-dm
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  # Descarga los modelos la primera vez (puede tardar varios minutos) y termina.
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: ollama:11434
+      MODEL: ${VDM_LLM_MODEL:-qwen3.5:2b}
+      EMBEDDING: ${VDM_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - ollama pull "$${MODEL}" && ollama pull "$${EMBEDDING}" && echo "Modelos listos."
+    restart: "no"
+
+  app:
+    build: .
+    image: virtual-dm:local
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_started
+    ports:
+      - "${VDM_PORT:-8000}:8000"
+    environment:
+      VDM_LLM_PROVIDER: ${VDM_LLM_PROVIDER:-ollama}
+      VDM_LLM_BASE_URL: ${VDM_LLM_BASE_URL:-http://ollama:11434}
+      VDM_LLM_MODEL: ${VDM_LLM_MODEL:-qwen3.5:2b}
+      VDM_EMBEDDING_MODEL: ${VDM_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
+      VDM_LLM_CONTEXT_BUDGET: ${VDM_LLM_CONTEXT_BUDGET:-5000}
+    volumes:
+      - ./data:/data
+
+volumes:
+  ollama:

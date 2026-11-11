@@ -34,6 +34,7 @@ from app.schemas.world import (
     SceneOut,
     SceneUpdate,
 )
+from app.document_processing.classify import player_text
 from app.services import world
 from app.services.errors import Forbidden, NotFound
 from app.services.events import append_event
@@ -216,10 +217,18 @@ def delete_entity(campaign: DmCampaign, entity_id: str, db: Db) -> None:
 
 # ---------------------------------------------------------------- hechos ---
 @router.get("/campaigns/{campaign_id}/facts", response_model=list[FactOut])
-def list_facts(campaign: CampaignDep, db: Db, dm: IsDm) -> list[Fact]:
+def list_facts(campaign: CampaignDep, db: Db, dm: IsDm) -> list[FactOut]:
     if dm:
-        return list(db.scalars(select(Fact).where(Fact.campaign_id == campaign.id).order_by(Fact.created_at)))
-    return world.known_facts(db, campaign.id)
+        rows = db.scalars(select(Fact).where(Fact.campaign_id == campaign.id).order_by(Fact.created_at))
+        return [FactOut.model_validate(f) for f in rows]
+    result = []
+    for fact in world.known_facts(db, campaign.id):
+        out = FactOut.model_validate(fact)
+        out.statement = player_text(fact.statement)
+        out.discovery = {}
+        out.keywords = []
+        result.append(out)
+    return result
 
 
 @router.post("/campaigns/{campaign_id}/facts", response_model=FactOut, status_code=201)
