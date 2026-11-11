@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import MetaData
@@ -20,3 +21,7 @@ class Base(DeclarativeBase):
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
+
+
+def new_id() -> str:
+    return uuid.uuid4().hex

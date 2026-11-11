@@ -33,6 +33,16 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
 
+      - name: Generar migración (temporal)
+        if: runner.os == 'Linux'
+        env:
+          VDM_DATA_DIR: /tmp/vdm-gen
+        run: |
+          mkdir -p /tmp/vdm-gen
+          alembic upgrade head
+          alembic revision --autogenerate -m "modelo de juego" --rev-id 0002
+          python ../.github/scripts/emit.py "alembic/versions/0002_*.py"
+
       - name: Lint (ruff)
         run: python ../.github/scripts/run.py ruff ruff check --output-format=concise .
 
