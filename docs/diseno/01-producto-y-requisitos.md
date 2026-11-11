@@ -124,9 +124,9 @@ Numerados para poder referenciarlos desde issues (`RF-xx`). La columna **MVP** i
 
 | ID | Categoría | Requisito |
 |---|---|---|
-| RNF-01 | Ejecución | Funciona en `localhost` en Windows, macOS y Linux con Python 3.12+ y Node 20+ |
+| RNF-01 | Ejecución | Funciona en `localhost` en **Windows y Linux** (D-12) con Python 3.12+ y Node 20+. macOS no se prueba |
 | RNF-02 | Sin conexión | Todo lo que no depende del LLM (fichas, dados, mapas, memoria, consulta por texto) funciona sin Internet |
-| RNF-03 | Proveedor de IA | El proveedor se cambia por configuración (Anthropic, OpenAI, Ollama) sin tocar el resto del código |
+| RNF-03 | Proveedor de IA | Ollama local por defecto; el proveedor y el modelo se cambian por configuración sin tocar el resto del código |
 | RNF-04 | Integridad | Ninguna escritura de estado mecánico se hace desde texto libre de la IA; todo pasa por comandos validados |
 | RNF-05 | Trazabilidad | Cada cambio de estado genera un evento con autor (jugador, IA, DM, sistema), sesión y marca de tiempo |
 | RNF-06 | Confidencialidad | La información `dm` y la `condicionada` no descubierta nunca sale por la API de jugadores |

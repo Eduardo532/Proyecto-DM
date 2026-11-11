@@ -4,8 +4,8 @@ Registro vivo pedido en la sección 21 del prompt maestro. Se actualiza en cada 
 
 ## Estado actual
 
-- **Fase:** 0 — Análisis y diseño (entregado, pendiente de tu revisión).
-- **Código:** ninguno todavía, a propósito (sección 22: "no generes código hasta que el análisis y la arquitectura estén definidos").
+- **Fase:** 1 — Estructura y aplicación base (en curso).
+- **Diseño:** aprobado el 2026-11-10 (respuestas en el issue #1).
 
 ## Funcionalidades terminadas
 
@@ -25,17 +25,20 @@ Ninguno (no hay código).
 
 | # | Decisión | Estado | Documento |
 |---|---|---|---|
-| D-01 | Monolito modular FastAPI + SPA React; la IA solo actúa mediante herramientas validadas | Propuesta | [02](./diseno/02-arquitectura.md) |
-| D-02 | Event log inmutable + estado actual en tablas | Propuesta | [03](./diseno/03-modelo-de-datos.md) |
-| D-03 | Tres niveles de conocimiento, cerrado por defecto (`dm`) | Propuesta | [03](./diseno/03-modelo-de-datos.md), [05](./diseno/05-ia-narrativa-rag-y-secretos.md) |
-| D-04 | RAG propio con FTS5 + sqlite-vec, filtro de nivel dentro de la consulta | Propuesta | [05](./diseno/05-ia-narrativa-rag-y-secretos.md) |
-| D-05 | Adaptador de proveedor LLM propio (Anthropic, OpenAI, Ollama) | Propuesta | [02](./diseno/02-arquitectura.md) |
-| D-06 | Mapas: capa lógica manda; mapas generados lógica → visual | Propuesta | [07](./diseno/07-mapas.md) |
-| D-07 | Solo reglas del SRD 5.1 en el repositorio | Propuesta | [08](./diseno/08-reglas-y-combate.md) |
-| D-08 | Núcleo de reglas adelantado a fase 3a | Propuesta | [10](./diseno/10-pruebas-fases-riesgos-mvp.md) |
-| D-09 | Visión de grupo por defecto en pantalla compartida | Propuesta | [07](./diseno/07-mapas.md), [11](./diseno/11-problemas-y-preguntas-abiertas.md) |
+| D-01 | Monolito modular FastAPI + SPA React; la IA solo actúa mediante herramientas validadas | Aceptada | [02](./diseno/02-arquitectura.md) |
+| D-02 | Event log inmutable + estado actual en tablas | Aceptada | [03](./diseno/03-modelo-de-datos.md) |
+| D-03 | Tres niveles de conocimiento, cerrado por defecto (`dm`) | Aceptada | [03](./diseno/03-modelo-de-datos.md), [05](./diseno/05-ia-narrativa-rag-y-secretos.md) |
+| D-04 | RAG propio con FTS5 + sqlite-vec, filtro de nivel dentro de la consulta | Aceptada | [05](./diseno/05-ia-narrativa-rag-y-secretos.md) |
+| D-05 | Adaptador de proveedor LLM propio (Ollama y compatible con OpenAI) | Aceptada | [02](./diseno/02-arquitectura.md) |
+| D-06 | Mapas: capa lógica manda; mapas generados lógica → visual | Aceptada | [07](./diseno/07-mapas.md) |
+| D-07 | Solo reglas del SRD 5.1 en el repositorio | Aceptada | [08](./diseno/08-reglas-y-combate.md) |
+| D-08 | Núcleo de reglas adelantado a fase 3a | Aceptada | [10](./diseno/10-pruebas-fases-riesgos-mvp.md) |
+| D-09 | Visión de grupo por defecto en pantalla compartida | Propuesta (pendiente de confirmar) | [07](./diseno/07-mapas.md), [11](./diseno/11-problemas-y-preguntas-abiertas.md) |
+| D-10 | Proveedor de IA: Ollama local, sin claves de API; modelo por defecto `qwen3.8:27b`, ajustable según la VRAM | Aceptada | [guía de Ollama](./guia-ollama.md) |
+| D-11 | Embeddings con `qwen3-embedding` vía Ollama (sin PyTorch) | Aceptada | [02](./diseno/02-arquitectura.md) |
+| D-12 | Plataformas soportadas: Windows y Linux; CI en ambas | Aceptada | [01](./diseno/01-producto-y-requisitos.md) |
 
 ## Próxima tarea
 
-1. Que respondas las preguntas ★ de [11-problemas-y-preguntas-abiertas.md](./diseno/11-problemas-y-preguntas-abiertas.md).
-2. Con eso, cerrar las decisiones D-01 a D-09 y comenzar la **Fase 1**: estructura del repositorio, backend y frontend base, CI.
+1. Fase 1, primer PR: estructura del repositorio, CI (Windows y Linux) y backend base (issues #10 y #11).
+2. Pendiente de ti: memoria de la tarjeta gráfica (VRAM) para fijar el modelo por defecto.

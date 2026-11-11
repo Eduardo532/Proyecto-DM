@@ -20,6 +20,8 @@
 
 Las marcadas con ★ bloquean el inicio; el resto pueden responderse durante la fase 1.
 
+> **Respondidas el 2026-11-10:** 1 → Windows y Linux · 2 → Ollama con el modelo gratuito más potente, sin clave de API · 3 → Sí · 4 → Sí. Queda pendiente saber la **memoria de la tarjeta gráfica** para elegir el tamaño de modelo.
+
 1. ★ **Sistema operativo** del equipo donde se ejecutará (Windows, macOS, Linux). Determina los comandos de instalación y las pruebas de dependencias nativas.
 2. ★ **Proveedor de IA** para el desarrollo: ¿Anthropic (Claude), OpenAI, Ollama local, u otro? ¿Tienes ya una clave de API? ¿Hay un presupuesto mensual orientativo?
 3. ★ **¿Aceptas los añadidos tecnológicos** (Alembic, Zustand + TanStack Query, sqlite-vec, Hypothesis, Playwright) y el **RAG propio** en lugar de LlamaIndex?

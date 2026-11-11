@@ -11,7 +11,7 @@
 | Integración | Servicios + SQLite en memoria: transacciones evento + cambio, versiones, migraciones Alembic arriba/abajo | Pytest | Cada commit |
 | API | Rutas REST y WebSocket con `TestClient`; **las rutas de jugadores nunca devuelven campos secretos** (prueba que recorre todas las rutas y busca marcadores sembrados) | Pytest + httpx | Cada commit |
 | Procesamiento PDF | Aventura de prueba propia (PDF generado por el proyecto) con salas, recuadros, bloque de estadísticas, tabla, mapa y puerta secreta; se comparan resultados con un "dorado" | Pytest | Cada commit |
-| Comportamiento de la IA | Escenarios grabados: no actúa por los jugadores; pide la tirada correcta; no revela CD; no revela el secreto ante 20 intentos de manipulación conocidos; usa herramientas para cambiar PG; respeta "no inventar tiradas" | Pytest con proveedor real (marcadas `@pytest.mark.llm`, fuera del CI por coste) y con respuestas grabadas (en CI) | Antes de cada versión |
+| Comportamiento de la IA | Escenarios grabados: no actúa por los jugadores; pide la tirada correcta; no revela CD; no revela el secreto ante 20 intentos de manipulación conocidos; usa herramientas para cambiar PG; respeta "no inventar tiradas" | Pytest con Ollama real (marcadas `@pytest.mark.llm`, fuera del CI porque requieren GPU) y con respuestas grabadas (en CI) | Antes de cada versión |
 | Frontend unitario | Componentes de ficha, panel de tiradas, selector de jugador, stores (el store DM se vacía al salir) | Vitest + Testing Library | Cada commit |
 | Extremo a extremo | Crear campaña → subir PDF de prueba → crear personajes → iniciar sesión → acción → tirada → resultado → cerrar → reanudar | Playwright con proveedor LLM simulado | Cada PR a `main` |
 | Manual | Lista de verificación por fase con pasos para que tú la pruebes y confirmes | Documento en `docs/` | Al cerrar cada fase |
@@ -45,13 +45,13 @@ Cada fase se entrega en una rama con PR, lista de verificación manual y registr
 | R3 | Filtración de secretos por el LLM | Media | Alto | Defensa estructural en capas (5.5); batería de pruebas de manipulación; "ante la duda, `dm`" |
 | R4 | Inconsistencia narrativa en campañas largas | Media | Alto | Hechos estructurados, resúmenes validados contra estado, verificador opcional |
 | R5 | El LLM no usa bien las herramientas o "inventa" números | Media | Alto | Toda mecánica solo por herramientas; validación y mensajes de error claros; pruebas de comportamiento |
-| R6 | Coste y latencia de la API | Media | Medio | Presupuesto de contexto, streaming, modelo pequeño para clasificar/resumir y grande para narrar, táctica rápida sin LLM para esbirros |
-| R7 | Modelos locales (Ollama) insuficientes | Alta | Medio | Soportados pero no la referencia de calidad; documentar requisitos de hardware |
+| R6 | Latencia del modelo local | Alta | Medio | Presupuesto de contexto, streaming, modelo pequeño para clasificar/resumir y grande para narrar, táctica rápida sin LLM para esbirros |
+| R7 | Calidad del modelo local (herramientas, secretos, español) | Alta | **Alto** | Ollama es ahora el proveedor principal (D-10): defensas estructurales, salidas con esquema JSON, batería de pruebas de comportamiento con el modelo real antes de cada versión y requisitos de hardware documentados |
 | R8 | Amplitud de las reglas de 5e | Alta | Medio | Cubrir primero el SRD; reglas no implementadas → el LLM propone y el DM confirma, con aviso explícito |
 | R9 | Pantalla compartida y modo DM | Media | Medio | PIN, aviso previo, expiración, store separado; documentar el límite |
 | R10 | Alcance excesivo para un proyecto personal | Alta | Alto | MVP estricto, fases con entregables verificables, registro de pendientes |
 | R11 | Licencias (material no SRD, PDF comerciales) | Baja | Alto | No versionar `data/`; aventura de prueba propia; atribución SRD |
-| R12 | Dependencias nativas en Windows (sqlite-vec, Tesseract, PyTorch para embeddings) | Media | Medio | Probar instalación en Windows en la fase 1; embeddings vía proveedor como alternativa a PyTorch |
+| R12 | Dependencias nativas en Windows (sqlite-vec, Tesseract) | Media | Medio | CI en Windows y Linux desde la fase 1; embeddings vía Ollama (sin PyTorch) |
 
 ## 10.4 Alcance realista del MVP
 

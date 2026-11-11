@@ -2,7 +2,7 @@
 
 Aplicación web local que usa inteligencia artificial para dirigir partidas de **Dungeons & Dragons 5e (2014)** a partir de aventuras en PDF, con un motor de reglas determinista, mapas interactivos, niebla de guerra y memoria persistente de campaña.
 
-> **Estado:** fase de análisis y diseño. Todavía no hay código ejecutable. Ver [registro del proyecto](docs/registro-del-proyecto.md).
+> **Estado:** diseño aprobado; comenzando la Fase 1. Ver [registro del proyecto](docs/registro-del-proyecto.md).
 
 ## Idea en una frase
 
@@ -12,12 +12,12 @@ Aplicación web local que usa inteligencia artificial para dirigir partidas de *
 
 | Característica | Configuración |
 |---|---|
-| Tipo | Aplicación web en `localhost` |
+| Tipo | Aplicación web en `localhost` (Windows y Linux) |
 | Modalidad | Presencial, una pantalla compartida, varios jugadores |
 | Sistema | D&D 5e (2014), reglas del SRD 5.1 |
 | Backend | Python + FastAPI + SQLite |
 | Frontend | React + TypeScript + Tailwind + Konva |
-| IA | Proveedor LLM intercambiable (nube u Ollama) |
+| IA | Ollama en el propio equipo (por defecto `qwen3.8:27b`), sin claves de API |
 | Idioma | Español |
 
 ## Documentación
@@ -36,6 +36,7 @@ Aplicación web local que usa inteligencia artificial para dirigir partidas de *
   9. [Memoria y continuidad](docs/diseno/09-memoria.md)
   10. [Pruebas, fases, riesgos y MVP](docs/diseno/10-pruebas-fases-riesgos-mvp.md)
   11. [Problemas detectados y preguntas abiertas](docs/diseno/11-problemas-y-preguntas-abiertas.md)
+- [Guía de Ollama](docs/guia-ollama.md): qué modelo usar según tu tarjeta gráfica e instalación.
 - [Registro del proyecto](docs/registro-del-proyecto.md): terminado, pendiente, errores, decisiones y próxima tarea.
 
 ## Plan

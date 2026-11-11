@@ -29,7 +29,7 @@ flowchart TB
 
         subgraph IA["Capa de IA"]
             NARR["Motor narrativo<br/>prompts · herramientas"]
-            PROV["Adaptador de proveedor<br/>Anthropic · OpenAI · Ollama"]
+            PROV["Adaptador de proveedor<br/>Ollama · compatible OpenAI"]
             GUARD["Filtro de fugas"]
         end
 
@@ -52,7 +52,7 @@ flowchart TB
         FILES[["Archivos<br/>PDF · imágenes · mapas · backups"]]
     end
 
-    LLM(("Proveedor LLM<br/>nube u Ollama local"))
+    LLM(("Ollama<br/>en el mismo equipo"))
 
     UIJ <--> APIJ
     UIDM <--> APIDM
@@ -95,11 +95,11 @@ Se mantienen las tecnologías propuestas en el prompt maestro salvo donde se ind
 | Base de datos | SQLite (modo WAL) | Propuesta original. Un archivo, sin servidor, fácil de respaldar |
 | ORM y migraciones | SQLAlchemy 2.0 + **Alembic** | Alembic **añadido**: sin migraciones versionadas, cada cambio de modelo rompería las partidas guardadas |
 | Búsqueda | SQLite FTS5 + **sqlite-vec** | **Añadido.** FTS5 para búsqueda por palabras (nombres propios, "sala 12") y sqlite-vec para similitud semántica, todo dentro del mismo archivo SQLite |
-| Embeddings | `sentence-transformers` con un modelo multilingüe pequeño (p. ej. `multilingual-e5-small`), o embeddings del proveedor | Local por defecto para que la indexación funcione sin Internet y sin coste. Configurable |
+| Embeddings | `qwen3-embedding` servido por Ollama (0.6b por defecto; 4b/8b si hay memoria) | **Decidido (D-11).** Multilingüe y local. Al usar Ollama no hace falta instalar PyTorch ni `sentence-transformers`, lo que simplifica mucho la instalación en Windows |
 | PDF | PyMuPDF | Propuesta original. Texto con posición, imágenes, tablas (`find_tables`) y metadatos de página |
 | OCR | Tesseract (vía PyMuPDF/`pytesseract`) con idioma `spa` | Opcional, solo para PDF escaneados |
 | Comunicación | WebSocket (FastAPI) + REST | Propuesta original. REST para CRUD; WebSocket para narración en streaming y eventos de mesa |
-| IA | Adaptador propio sobre los SDK oficiales (`anthropic`, `openai`) y la API de Ollama | Ver 2.4 |
+| IA | **Ollama local (D-10)**, modelo por defecto `qwen3.8:27b`, a través de un adaptador propio | Ver 2.4 |
 | RAG | **Implementación propia** (no LlamaIndex) | Ver 2.4 |
 | Pruebas backend | Pytest + **Hypothesis** | Hypothesis **añadido** para pruebas basadas en propiedades del motor de reglas (p. ej. "la vida nunca supera el máximo") |
 | Pruebas frontend | Vitest + Testing Library + **Playwright** | Playwright **añadido** para pruebas de extremo a extremo de la sesión |
@@ -126,7 +126,15 @@ LLMProvider.generate(messages, tools, response_schema, stream) -> respuesta
 LLMProvider.embed(texts) -> vectores   (opcional)
 ```
 
-con implementaciones `AnthropicProvider`, `OpenAIProvider` y `OllamaProvider`. Así el resto del sistema no conoce el proveedor (RNF-03). Advertencia: los modelos locales actuales vía Ollama son bastante menos fiables usando herramientas y respetando secretos; se soportarán, pero el MVP se valida con un modelo en la nube.
+con `OllamaProvider` como implementación principal y `OpenAICompatibleProvider` como segunda opción (sirve para LM Studio, llama.cpp `llama-server` y, si algún día se quiere, servicios en la nube). Así el resto del sistema no conoce el proveedor (RNF-03).
+
+**Decisión D-10: Ollama local, sin claves de API.** Consecuencias para el diseño:
+
+- El modelo elegido depende de la memoria de vídeo (VRAM) del equipo. El nombre del modelo es configuración (`VDM_LLM_MODEL`), no código.
+- Los modelos locales son menos fiables que los de la nube al usar herramientas y al guardar secretos. Por eso cobran todavía más importancia las defensas estructurales (5.5): el modelo nunca recibe lo que no debe revelar fuera de la escena, y toda mecánica pasa por herramientas validadas.
+- Se usarán **salidas estructuradas** de Ollama (parámetro `format` con esquema JSON) para la clasificación de acciones y los resúmenes, en lugar de confiar en que el texto libre tenga el formato correcto.
+- El presupuesto de contexto (~12 000 tokens) importa doblemente: un contexto largo consume VRAM y hace más lenta la respuesta.
+- Se puede separar el modelo de narración (grande) del de tareas auxiliares (clasificar, resumir) para ahorrar tiempo.
 
 ## 2.5 Organización de módulos
 
@@ -235,8 +243,7 @@ Versiones mínimas orientativas; se fijarán en `pyproject.toml` y `package.json
 | `pymupdf` | Texto, imágenes, tablas de PDF | 2 |
 | `pytesseract` + Tesseract instalado en el sistema | OCR (opcional) | 2 |
 | `sqlite-vec` | Búsqueda vectorial en SQLite | 2–3 |
-| `sentence-transformers` | Embeddings locales (descarga un modelo de ~120 MB la primera vez) | 2–3 |
-| `anthropic`, `openai`, `httpx` | Proveedores LLM (Ollama vía `httpx`) | 3 |
+| `httpx` | Cliente HTTP para la API de Ollama y la compatible con OpenAI (sin SDK de terceros) | 2–3 |
 | `pillow`, `numpy` | Tratamiento de imágenes de mapas | 6 |
 | `pytest`, `pytest-asyncio`, `hypothesis`, `httpx` | Pruebas | 1 |
 | `ruff`, `mypy` | Lint y tipos | 1 |
@@ -258,5 +265,5 @@ Versiones mínimas orientativas; se fijarán en `pyproject.toml` y `package.json
 
 - Python 3.12 o superior, Node.js 20 LTS o superior, Git.
 - Tesseract OCR con paquete de idioma español (solo si se usan PDF escaneados).
-- Ollama (solo si se quiere usar un modelo local).
-- Una clave de API del proveedor LLM elegido (se guarda en `backend/.env`, que no se versiona).
+- **Ollama** (obligatorio desde la fase 2), con el modelo de narración y el de embeddings descargados (`ollama pull qwen3.8:27b` y `ollama pull qwen3-embedding:0.6b`).
+- No se necesita ninguna clave de API.
