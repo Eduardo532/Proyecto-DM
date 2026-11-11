@@ -41,3 +41,28 @@ jobs:
 
       - name: Pruebas (pytest)
         run: python ../.github/scripts/run.py pytest pytest -q -p no:cacheprovider --tb=short
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Instalar dependencias
+        run: python3 ../.github/scripts/run.py npm npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Tipos (tsc)
+        run: python3 ../.github/scripts/run.py tsc npm run typecheck
+
+      - name: Pruebas (vitest)
+        run: python3 ../.github/scripts/run.py vitest npm test
+
+      - name: Compilar (vite)
+        run: python3 ../.github/scripts/run.py vite npm run build

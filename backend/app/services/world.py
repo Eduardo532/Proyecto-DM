@@ -12,6 +12,7 @@ from typing import Any
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from app.document_processing.classify import player_text
 from app.engines.errors import RuleViolation
 from app.engines.maps.grid import DoorState, Grid, Occupancy, Terrain, cell_label, shortest_path
 from app.engines.maps.vision import Light, LightSource, Viewer, group_visible, light_map
@@ -270,7 +271,7 @@ def reveal_fact(
         return False
     event = append_event(
         db, fact.campaign_id, "fact_revealed",
-        {"fact_id": fact.id, "subject": fact.subject, "statement": fact.statement, "to": knower_kind,
+        {"fact_id": fact.id, "subject": fact.subject, "statement": player_text(fact.statement), "to": knower_kind,
          "character_id": character_id},
         actor_kind=actor_kind, session_id=session_id,
     )
