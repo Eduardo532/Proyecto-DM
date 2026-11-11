@@ -20,9 +20,9 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -34,12 +34,10 @@ jobs:
           python -m pip install -e ".[dev]"
 
       - name: Lint (ruff)
-        run: |
-          ruff check .
-          ruff format --check .
+        run: python ../.github/scripts/run.py ruff ruff check --output-format=concise .
 
       - name: Tipos (mypy)
-        run: mypy app
+        run: python ../.github/scripts/run.py mypy mypy app
 
       - name: Pruebas (pytest)
-        run: pytest
+        run: python ../.github/scripts/run.py pytest pytest -q -p no:cacheprovider --tb=short
