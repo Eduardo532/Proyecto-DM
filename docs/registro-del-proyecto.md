@@ -44,4 +44,4 @@ Ninguno (no hay código).
 
 1. Que pruebes el backend en tu equipo siguiendo `docs/desarrollo.md` y confirmes (issues #10 y #11).
 2. Siguiente PR: frontend base (issue #12).
-3. Pendiente de ti: memoria de la tarjeta gráfica (VRAM) para fijar el modelo por defecto.
+3. Pendiente de ti: memoria RAM del equipo (decide si `qwen3.5:4b` es viable como opción de calidad).
