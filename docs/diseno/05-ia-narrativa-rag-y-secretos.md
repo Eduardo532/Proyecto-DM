@@ -4,6 +4,29 @@
 
 ## 5.1 Ciclo de un turno narrativo
 
+El coordinador tiene **dos modos** de turno, elegidos por configuración según la capacidad del modelo (decisión D-13):
+
+| Modo | Para qué modelos | Cómo trabaja |
+|---|---|---|
+| **Canal fijo** (por defecto) | Modelos pequeños (2–4 B parámetros, GPU de 4–8 GB) | El código decide el orden de los pasos. El modelo solo rellena formularios JSON con opciones cerradas y escribe la narración |
+| **Agente con herramientas** | Modelos grandes y fiables usando herramientas | El modelo decide qué herramientas llamar, en bucle, con un límite de pasos |
+
+### Modo canal fijo (por defecto)
+
+Un modelo pequeño se equivoca mucho más cuando tiene que decidir por sí mismo qué herramienta llamar y con qué argumentos. En cambio, rellena bastante bien un JSON con campos cerrados si se le obliga con un esquema (`format` de Ollama). Por eso, en este modo:
+
+1. **Recuperar** (código): escena, ficha del personaje, hechos y fragmentos relevantes, y el elemento del mapa seleccionado.
+2. **Clasificar** (modelo, salida JSON con esquema): tipo de acción, característica y habilidad **elegidas de una lista cerrada**, objetivo **elegido entre los elementos de la escena**. Nada de texto libre en este paso.
+3. **Validar y completar** (código): el motor comprueba que la combinación sea válida y **fija la CD**: primero la que indique el PDF para esa situación; si no hay, la tabla estándar de 5e según la dificultad que el modelo haya elegido (`facil`/`media`/`dificil`…), nunca un número inventado por el modelo.
+4. **Tirada** (motor): si hace falta, se crea la tirada pendiente y el turno se detiene.
+5. **Resolver** (motor): resultado, hechos que se revelan según los niveles de la escena, cambios en fichas.
+6. **Narrar** (modelo, texto libre): recibe *solo* el resultado ya resuelto y la información que puede contar, y escribe la narración.
+7. **Filtro de fugas** y envío por streaming.
+
+Cuando la clasificación no pasa la validación dos veces seguidas, el sistema pide aclaración al jugador ("¿Quieres registrar el altar o forzar la tapa?") en lugar de inventar.
+
+### Modo agente con herramientas
+
 Un turno no es "una llamada al LLM". Es un ciclo controlado por el coordinador, con un máximo de pasos para acotar coste y latencia:
 
 1. **Entrada**: texto de la acción, jugador y personaje activos, selección en el mapa (si la hay).
@@ -73,6 +96,8 @@ Plantillas versionadas en `backend/app/ai/prompts/`, con pruebas de comportamien
 | Resumen de la sesión y de sesiones previas | 1 500 |
 | Turnos recientes literales | 2 500 |
 | **Total objetivo** | **≈ 11 500** |
+
+Estos valores son para modelos grandes. **El presupuesto es configurable** (`VDM_LLM_CONTEXT_BUDGET`): con una GPU de 4 GB la memoria que queda para el contexto es pequeña, así que el objetivo inicial es **≈ 4 000–6 000 tokens**, reduciendo sobre todo los fragmentos RAG (2–3 fragmentos) y los turnos literales (los 3–4 últimos). Los valores reales se medirán en la fase 3 en tu equipo.
 
 Si se supera, se recorta primero lo literal antiguo y luego los fragmentos de menor puntuación.
 

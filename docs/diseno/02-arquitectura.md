@@ -99,7 +99,7 @@ Se mantienen las tecnologías propuestas en el prompt maestro salvo donde se ind
 | PDF | PyMuPDF | Propuesta original. Texto con posición, imágenes, tablas (`find_tables`) y metadatos de página |
 | OCR | Tesseract (vía PyMuPDF/`pytesseract`) con idioma `spa` | Opcional, solo para PDF escaneados |
 | Comunicación | WebSocket (FastAPI) + REST | Propuesta original. REST para CRUD; WebSocket para narración en streaming y eventos de mesa |
-| IA | **Ollama local (D-10)**, modelo por defecto `qwen3.8:27b`, a través de un adaptador propio | Ver 2.4 |
+| IA | **Ollama local (D-10)**, modelo por defecto `qwen3.5:2b` (equipo de referencia: NVIDIA de 4 GB), a través de un adaptador propio | Ver 2.4 y [guía de Ollama](../guia-ollama.md) |
 | RAG | **Implementación propia** (no LlamaIndex) | Ver 2.4 |
 | Pruebas backend | Pytest + **Hypothesis** | Hypothesis **añadido** para pruebas basadas en propiedades del motor de reglas (p. ej. "la vida nunca supera el máximo") |
 | Pruebas frontend | Vitest + Testing Library + **Playwright** | Playwright **añadido** para pruebas de extremo a extremo de la sesión |
@@ -133,7 +133,8 @@ con `OllamaProvider` como implementación principal y `OpenAICompatibleProvider`
 - El modelo elegido depende de la memoria de vídeo (VRAM) del equipo. El nombre del modelo es configuración (`VDM_LLM_MODEL`), no código.
 - Los modelos locales son menos fiables que los de la nube al usar herramientas y al guardar secretos. Por eso cobran todavía más importancia las defensas estructurales (5.5): el modelo nunca recibe lo que no debe revelar fuera de la escena, y toda mecánica pasa por herramientas validadas.
 - Se usarán **salidas estructuradas** de Ollama (parámetro `format` con esquema JSON) para la clasificación de acciones y los resúmenes, en lugar de confiar en que el texto libre tenga el formato correcto.
-- El presupuesto de contexto (~12 000 tokens) importa doblemente: un contexto largo consume VRAM y hace más lenta la respuesta.
+- El presupuesto de contexto es configurable: un contexto largo consume VRAM y hace más lenta la respuesta. Con 4 GB el objetivo es ≈ 4 000–6 000 tokens.
+- **D-13: con modelos pequeños el turno usa un canal fijo** (el código dirige los pasos y el modelo rellena formularios JSON cerrados y narra), en lugar de un agente que decide qué herramientas llamar. Ver [05 §5.1](./05-ia-narrativa-rag-y-secretos.md).
 - Se puede separar el modelo de narración (grande) del de tareas auxiliares (clasificar, resumir) para ahorrar tiempo.
 
 ## 2.5 Organización de módulos
@@ -265,5 +266,5 @@ Versiones mínimas orientativas; se fijarán en `pyproject.toml` y `package.json
 
 - Python 3.12 o superior, Node.js 20 LTS o superior, Git.
 - Tesseract OCR con paquete de idioma español (solo si se usan PDF escaneados).
-- **Ollama** (obligatorio desde la fase 2), con el modelo de narración y el de embeddings descargados (`ollama pull qwen3.8:27b` y `ollama pull qwen3-embedding:0.6b`).
+- **Ollama** (obligatorio desde la fase 2), con el modelo de narración y el de embeddings descargados (`ollama pull qwen3.5:2b` y `ollama pull qwen3-embedding:0.6b`).
 - No se necesita ninguna clave de API.

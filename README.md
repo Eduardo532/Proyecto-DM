@@ -17,7 +17,7 @@ Aplicación web local que usa inteligencia artificial para dirigir partidas de *
 | Sistema | D&D 5e (2014), reglas del SRD 5.1 |
 | Backend | Python + FastAPI + SQLite |
 | Frontend | React + TypeScript + Tailwind + Konva |
-| IA | Ollama en el propio equipo (por defecto `qwen3.8:27b`), sin claves de API |
+| IA | Ollama en el propio equipo (por defecto `qwen3.5:2b`, apto para GPU de 4 GB), sin claves de API |
 | Idioma | Español |
 
 ## Documentación

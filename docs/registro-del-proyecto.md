@@ -34,9 +34,10 @@ Ninguno (no hay código).
 | D-07 | Solo reglas del SRD 5.1 en el repositorio | Aceptada | [08](./diseno/08-reglas-y-combate.md) |
 | D-08 | Núcleo de reglas adelantado a fase 3a | Aceptada | [10](./diseno/10-pruebas-fases-riesgos-mvp.md) |
 | D-09 | Visión de grupo por defecto en pantalla compartida | Propuesta (pendiente de confirmar) | [07](./diseno/07-mapas.md), [11](./diseno/11-problemas-y-preguntas-abiertas.md) |
-| D-10 | Proveedor de IA: Ollama local, sin claves de API; modelo por defecto `qwen3.8:27b`, ajustable según la VRAM | Aceptada | [guía de Ollama](./guia-ollama.md) |
+| D-10 | Proveedor de IA: Ollama local, sin claves de API. Equipo de referencia: Linux con NVIDIA de 4 GB → modelo por defecto `qwen3.5:2b` (alternativa `qwen3.5:4b` con parte en RAM) | Aceptada (revisada 2026-11-10) | [guía de Ollama](./guia-ollama.md) |
 | D-11 | Embeddings con `qwen3-embedding` vía Ollama (sin PyTorch) | Aceptada | [02](./diseno/02-arquitectura.md) |
 | D-12 | Plataformas soportadas: Windows y Linux; CI en ambas | Aceptada | [01](./diseno/01-producto-y-requisitos.md) |
+| D-13 | Turno de IA en "canal fijo" por defecto (formularios JSON cerrados + narración) para que funcione con modelos pequeños; modo agente opcional | Aceptada | [05](./diseno/05-ia-narrativa-rag-y-secretos.md) |
 
 ## Próxima tarea
 
