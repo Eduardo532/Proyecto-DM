@@ -160,14 +160,14 @@ def change_hp(
     record_changes(
         db, character, before, reason or kind, session_id=session_id, actor_kind=actor_kind,
         event_type="character_hp", payload=details,
-    )  # fmt: skip
+    )
     return details
 
 
 def set_condition(
     db: Session, character: Character, condition: str, present: bool, *, session_id: str | None = None,
     actor_kind: str = "dm",
-) -> None:  # fmt: skip
+) -> None:
     if condition not in Condition._value2member_map_ and condition != "exhaustion":
         raise RuleViolation(f"Condición desconocida: {condition}.")
     before = _snapshot(character)
@@ -180,7 +180,7 @@ def set_condition(
     record_changes(
         db, character, before, f"condición {condition}", session_id=session_id, actor_kind=actor_kind,
         event_type="character_condition", payload={"condition": condition, "present": present},
-    )  # fmt: skip
+    )
 
 
 def death_save(db: Session, character: Character, natural: int, *, session_id: str | None = None) -> dict[str, Any]:
@@ -197,5 +197,5 @@ def death_save(db: Session, character: Character, natural: int, *, session_id: s
     record_changes(
         db, character, before, "salvación contra muerte", session_id=session_id, actor_kind="system",
         event_type="death_save", payload=details,
-    )  # fmt: skip
+    )
     return details

@@ -81,7 +81,7 @@ def _stats(db: Session, entity: Entity) -> tuple[int, int, int]:
 def start_combat(
     db: Session, session: GameSession, entity_ids: list[str], *, actor_kind: str = "ai",
     initiatives: dict[str, int] | None = None, rng: dice.RandomSource | None = None,
-) -> Combat:  # fmt: skip
+) -> Combat:
     """Inicia un encuentro. La iniciativa se tira en el servidor salvo que se indique."""
     if active_combat(db, session.campaign_id):
         raise Conflict("Ya hay un combate en curso.")
@@ -112,7 +112,7 @@ def start_combat(
             {"entity_id": c.id, "name": c.name, "initiative": c.initiative, "dex_modifier": c.dex_modifier,
              "speed_ft": c.speed_ft}
             for c in order
-        ],  # fmt: skip
+        ],
         log=log,
     )
     _save(combat, tracker)
@@ -120,7 +120,7 @@ def start_combat(
     db.flush()
     session.state = "combat"
     append_event(db, session.campaign_id, "combat_started", combat_view(db, combat, dm=False), actor_kind=actor_kind,
-                 session_id=session.id)  # fmt: skip
+                 session_id=session.id)
     return combat
 
 
@@ -140,7 +140,7 @@ def next_turn(db: Session, campaign_id: str, actor_kind: str = "player") -> Comb
     entity = db.get(Entity, current.id)
     name = current.name if entity is None or entity.kind == "character" else (entity.name_public or entity.name)
     append_event(db, campaign_id, "combat_turn", {"round": tracker.round, "entity_id": current.id, "name": name},
-                 actor_kind=actor_kind, session_id=combat.session_id)  # fmt: skip
+                 actor_kind=actor_kind, session_id=combat.session_id)
     return combat
 
 
@@ -178,7 +178,7 @@ def spend_movement(db: Session, campaign_id: str, entity_id: str, cost_ft: int) 
         budget = tracker.budgets[entity_id]
         tracker.budgets[entity_id] = TurnBudget(budget.action, budget.bonus, budget.reaction,
                                                 max(0, budget.movement_ft - cost_ft), budget.dashed,
-                                                budget.disengaged)  # fmt: skip
+                                                budget.disengaged)
         _save(combat, tracker)
 
 
@@ -202,5 +202,5 @@ def end_combat(db: Session, campaign_id: str, actor_kind: str = "dm") -> Combat:
     if session and session.state == "combat":
         session.state = "exploring"
     append_event(db, campaign_id, "combat_ended", {"round": combat.round}, actor_kind=actor_kind,
-                 session_id=combat.session_id)  # fmt: skip
+                 session_id=combat.session_id)
     return combat

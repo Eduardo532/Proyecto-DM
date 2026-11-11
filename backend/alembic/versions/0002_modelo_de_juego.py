@@ -5,7 +5,6 @@ Revises: 0001
 Create Date: 2026-11-11 00:59:47.883379
 """
 
-# ruff: noqa: E501
 from collections.abc import Sequence
 
 import sqlalchemy as sa

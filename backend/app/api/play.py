@@ -63,7 +63,7 @@ def update_session(campaign: CampaignDep, session_id: str, body: SessionUpdate, 
             raise NotFound("El participante no existe.")
         session.active_player_id = body.active_player_id
         append_event(db, campaign.id, "active_player", {"player_id": body.active_player_id,
-                     "name": player.display_name if player else None}, session_id=session.id)  # fmt: skip
+                     "name": player.display_name if player else None}, session_id=session.id)
     if "scene_id" in fields:
         scene = db.get(Scene, body.scene_id) if body.scene_id else None
         if body.scene_id and (scene is None or scene.campaign_id != campaign.id):
@@ -72,7 +72,7 @@ def update_session(campaign: CampaignDep, session_id: str, body: SessionUpdate, 
         if scene:
             scene.status = "active"
             append_event(db, campaign.id, "scene_changed", {"scene_id": scene.id, "name": scene.name},
-                         session_id=session.id)  # fmt: skip
+                         session_id=session.id)
     commit(db)
     return session
 
@@ -125,7 +125,7 @@ def request_roll(campaign: DmCampaign, body: CheckRequest, db: Db) -> dict[str, 
         db, session, character, kind=CheckKind(body.kind), skill=body.skill, ability=body.ability, dc=body.dc,
         difficulty=body.difficulty, dc_public=body.dc_public, advantage=body.advantage, reason=body.reason,
         requested_by="dm",
-    )  # fmt: skip
+    )
     commit(db)
     return roll_service.public_roll(roll)
 
@@ -163,7 +163,7 @@ def free_roll(campaign: CampaignDep, body: FreeRoll, db: Db) -> dict[str, Any]:
     if body.character_id:
         get_character(db, campaign, body.character_id)
     result = roll_service.free_roll(db, campaign, session, body.expression, body.mode, body.values, body.label,
-                                    body.character_id)  # fmt: skip
+                                    body.character_id)
     commit(db)
     return result
 
@@ -181,7 +181,7 @@ def player_action(campaign: CampaignDep, body: PlayerAction, db: Db) -> dict[str
         {"character_id": character.id, "name": character.name, "player_id": body.player_id, "text": body.text,
          "target": body.target},
         actor_kind="player", actor_id=body.player_id, session_id=session.id,
-    )  # fmt: skip
+    )
     commit(db)
     from app.ai.turn import schedule_turn
 

@@ -54,7 +54,7 @@ def close_session(db: Session, session: GameSession, summary: dict[str, Any]) ->
     session.ended_at = utc_now()
     session.summary = summary
     append_event(db, session.campaign_id, "session_closed", {"number": session.number, "summary": summary},
-                 session_id=session.id)  # fmt: skip
+                 session_id=session.id)
     return session
 
 

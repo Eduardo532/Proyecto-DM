@@ -10,12 +10,12 @@ from tests.helpers import setup_table
 def _map_scene(client: TestClient, t: dict) -> tuple[str, str]:
     cid, dm = t["cid"], t["dm"]
     game_map = client.post(f"/api/campaigns/{cid}/maps", json={"name": "Cripta", "width_cells": 10, "height_cells": 6},
-                           headers=dm).json()  # fmt: skip
+                           headers=dm).json()
     walls = [[5, y, "wall"] for y in range(6) if y != 3]
     logic = {"terrain": walls, "doors": [{"x": 5, "y": 3, "state": "closed"}], "lights": []}
     client.patch(f"/api/campaigns/{cid}/maps/{game_map['id']}", json={"logic": logic}, headers=dm)
     scene = client.post(f"/api/campaigns/{cid}/scenes", json={"name": "Osario", "summary_public": "Huesos.",
-                        "summary_dm": "Hay un ghoul tras la puerta.", "map_id": game_map["id"]}, headers=dm).json()  # fmt: skip
+                        "summary_dm": "Hay un ghoul tras la puerta.", "map_id": game_map["id"]}, headers=dm).json()
     return game_map["id"], scene["id"]
 
 
@@ -31,9 +31,9 @@ def test_mapa_niebla_y_entidades_ocultas(client: TestClient) -> None:
     assert placed.status_code == 200
     ghoul = client.post(f"/api/campaigns/{cid}/entities", json={"kind": "creature", "name": "Ghoul",
                         "name_public": "Figura encorvada", "scene_id": scene_id, "map_id": map_id, "x": 8, "y": 3,
-                        "hp_max": 22, "disposition": "hostile"}, headers=dm).json()  # fmt: skip
+                        "hp_max": 22, "disposition": "hostile"}, headers=dm).json()
     hidden_rat = client.post(f"/api/campaigns/{cid}/entities", json={"kind": "creature", "name": "Rata",
-                             "scene_id": scene_id, "map_id": map_id, "x": 2, "y": 1, "hidden": True}, headers=dm)  # fmt: skip
+                             "scene_id": scene_id, "map_id": map_id, "x": 2, "y": 1, "hidden": True}, headers=dm)
     assert hidden_rat.status_code == 201
     seen = {e["name"] for e in client.get(f"/api/campaigns/{cid}/entities", params={"scene_id": scene_id}).json()}
     assert seen == {"Thorin"}  # el ghoul está tras la puerta y la rata escondida
@@ -43,7 +43,7 @@ def test_mapa_niebla_y_entidades_ocultas(client: TestClient) -> None:
     blocked = client.post(f"/api/campaigns/{cid}/entities/{token['id']}/move", json={"x": 7, "y": 3})
     assert blocked.status_code == 422
     client.patch(f"/api/campaigns/{cid}/maps/{map_id}", json={"logic": {"terrain": [[5, y, "wall"] for y in range(6)
-                 if y != 3], "doors": [{"x": 5, "y": 3, "state": "open"}], "lights": []}}, headers=dm)  # fmt: skip
+                 if y != 3], "doors": [{"x": 5, "y": 3, "state": "open"}], "lights": []}}, headers=dm)
     seen = client.get(f"/api/campaigns/{cid}/entities", params={"scene_id": scene_id}).json()
     ghoul_view = next(e for e in seen if e["id"] == ghoul["id"])
     assert ghoul_view["name"] == "Figura encorvada" and ghoul_view["health"] == "ileso" and "stats" not in ghoul_view
@@ -55,7 +55,7 @@ def test_hechos_revelados_y_memoria(client: TestClient) -> None:
     t = setup_table(client)
     cid, dm = t["cid"], t["dm"]
     secret = client.post(f"/api/campaigns/{cid}/facts", json={"statement": "El altar tiene un resorte",
-                         "knowledge_level": "conditional"}, headers=dm).json()  # fmt: skip
+                         "knowledge_level": "conditional"}, headers=dm).json()
     client.post(f"/api/campaigns/{cid}/facts", json={"statement": "El sacerdote es el villano"}, headers=dm)
     assert client.get(f"/api/campaigns/{cid}/facts").json() == []
     client.post(f"/api/campaigns/{cid}/facts/{secret['id']}/reveal", json={"to": "party"}, headers=dm)
@@ -63,7 +63,7 @@ def test_hechos_revelados_y_memoria(client: TestClient) -> None:
     assert [f["statement"] for f in known] == ["El altar tiene un resorte"]
     memory = client.post(f"/api/campaigns/{cid}/memory", json={"content": "Thorin mintió al guardia"}, headers=dm).json()
     fixed = client.put(f"/api/campaigns/{cid}/memory/{memory['id']}", json={"content": "Thorin engañó al guardia"},
-                       headers=dm).json()  # fmt: skip
+                       headers=dm).json()
     listed = client.get(f"/api/campaigns/{cid}/memory").json()
     assert [m["id"] for m in listed] == [fixed["id"]]
 
@@ -78,9 +78,9 @@ def test_combate_por_turnos(client: TestClient) -> None:
     client.post(f"/api/campaigns/{cid}/entities/{token['id']}/move", json={"x": 0, "y": 0})
     goblin = client.post(f"/api/campaigns/{cid}/entities", json={"kind": "creature", "name": "Goblin",
                          "map_id": map_id, "scene_id": scene_id, "x": 3, "y": 0, "hp_max": 7, "disposition": "hostile",
-                         "stats": {"dex": 14}}, headers=dm).json()  # fmt: skip
+                         "stats": {"dex": 14}}, headers=dm).json()
     combat = client.post(f"/api/campaigns/{cid}/combat", json={"entity_ids": [token["id"], goblin["id"]],
-                         "initiatives": {token["id"]: 15, goblin["id"]: 10}}, headers=dm).json()  # fmt: skip
+                         "initiatives": {token["id"]: 15, goblin["id"]: 10}}, headers=dm).json()
     assert combat["current_entity_id"] == token["id"]
     assert client.get(f"/api/campaigns/{cid}/sessions/current").json()["state"] == "combat"
     moved = client.post(f"/api/campaigns/{cid}/entities/{token['id']}/move", json={"x": 0, "y": 4})

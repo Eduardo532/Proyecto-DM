@@ -26,7 +26,7 @@ AMBIENT = {"bright": Light.BRIGHT, "dim": Light.DIM, "dark": Light.DARK}
 def grid_for(game_map: GameMap) -> Grid:
     logic = game_map.logic or {}
     grid = Grid(game_map.width_cells, game_map.height_cells, game_map.cell_size_ft,
-                diagonal_rule=str(logic.get("diagonal_rule", "5e")))  # fmt: skip
+                diagonal_rule=str(logic.get("diagonal_rule", "5e")))
     for x, y, terrain in logic.get("terrain", []):
         grid.terrain[(int(x), int(y))] = Terrain(terrain)
     for door in logic.get("doors", []):
@@ -105,7 +105,7 @@ def map_for_players(db: Session, game_map: GameMap) -> dict[str, Any]:
     doors = [
         d for d in logic.get("doors", [])
         if known(d["x"], d["y"]) and (not d.get("secret") or d.get("discovered"))
-    ]  # fmt: skip
+    ]
     data = map_for_dm(game_map)
     data["logic"] = {
         "terrain": [t for t in logic.get("terrain", []) if known(t[0], t[1])],
@@ -200,7 +200,7 @@ def entities_for_players(db: Session, campaign_id: str, scene_id: str | None) ->
 def move_entity(
     db: Session, entity: Entity, x: int, y: int, *, budget_ft: int | None = None, actor_kind: str = "player",
     session_id: str | None = None,
-) -> dict[str, Any]:  # fmt: skip
+) -> dict[str, Any]:
     """Mueve un token validando el camino con la capa lógica. Devuelve camino y coste."""
     if entity.map_id is None:
         raise RuleViolation("La entidad no está en ningún mapa.")
@@ -244,7 +244,7 @@ def move_entity(
          "name": entity.name if entity.kind == "character" else entity.name_public or entity.name,
          "to": cell_label(target), "x": x, "y": y, "cost_ft": cost},
         actor_kind=actor_kind, session_id=session_id, visibility="dm" if entity.hidden else "public",
-    )  # fmt: skip
+    )
     return {"path": [list(c) for c in path], "cost_ft": cost, "to": cell_label(target)}
 
 
@@ -263,7 +263,7 @@ def known_facts(db: Session, campaign_id: str) -> list[Fact]:
 def reveal_fact(
     db: Session, fact: Fact, *, to: str = "party", character_id: str | None = None, actor_kind: str = "dm",
     session_id: str | None = None,
-) -> bool:  # fmt: skip
+) -> bool:
     """Marca un hecho como conocido. Devuelve False si ya se conocía."""
     knower_kind, knower_id = ("character", character_id) if to == "character" and character_id else ("party", "party")
     if db.get(FactAwareness, (fact.id, knower_kind, knower_id)):
@@ -273,7 +273,7 @@ def reveal_fact(
         {"fact_id": fact.id, "subject": fact.subject, "statement": fact.statement, "to": knower_kind,
          "character_id": character_id},
         actor_kind=actor_kind, session_id=session_id,
-    )  # fmt: skip
+    )
     db.add(FactAwareness(fact_id=fact.id, knower_kind=knower_kind, knower_id=knower_id, learned_event_id=event.id))
     return True
 

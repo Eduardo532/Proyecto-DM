@@ -60,7 +60,7 @@ def create_character(campaign: CampaignDep, body: CharacterCreate, db: Db) -> Ch
     service.to_engine(character)  # valida la ficha con el motor
     # Token en el mapa para poder posicionarlo más adelante.
     db.add(Entity(campaign_id=campaign.id, kind="character", character_id=character.id, name=character.name,
-                  disposition="ally", token_color="#4f6b3a"))  # fmt: skip
+                  disposition="ally", token_color="#4f6b3a"))
     append_event(db, campaign.id, "character_created", {"character_id": character.id, "name": character.name})
     commit(db)
     return character_out(character)
@@ -104,7 +104,7 @@ def change_hp(campaign: CampaignDep, character_id: str, body: HpChange, db: Db) 
     character = get_character(db, campaign, character_id)
     session = open_session(db, campaign.id)
     service.change_hp(db, character, body.kind, body.amount, damage_type=body.damage_type, critical=body.critical,
-                      reason=body.reason, session_id=session.id if session else None, actor_kind="player")  # fmt: skip
+                      reason=body.reason, session_id=session.id if session else None, actor_kind="player")
     commit(db)
     return character_out(character)
 
@@ -114,7 +114,7 @@ def change_condition(campaign: CampaignDep, character_id: str, body: ConditionCh
     character = get_character(db, campaign, character_id)
     session = open_session(db, campaign.id)
     service.set_condition(db, character, body.condition, body.present, session_id=session.id if session else None,
-                          actor_kind="player")  # fmt: skip
+                          actor_kind="player")
     commit(db)
     return character_out(character)
 

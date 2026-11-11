@@ -30,7 +30,7 @@ def summarize_session(db: Session, session: GameSession) -> dict[str, Any]:
     states = []
     for character in db.scalars(select(Character).where(Character.campaign_id == session.campaign_id)):
         states.append(f"{character.name}: {character.hp_current}/{character.hp_max} PG"
-                      + (f", {', '.join(character.conditions)}" if character.conditions else ""))  # fmt: skip
+                      + (f", {', '.join(character.conditions)}" if character.conditions else ""))
     return {
         "acontecimientos": [f"{a.get('name')}: {a.get('text')}" for a in actions][-30:],
         "descubrimientos": revealed,

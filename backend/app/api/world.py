@@ -101,7 +101,7 @@ def create_map(campaign: DmCampaign, body: MapCreate, db: Db) -> dict[str, Any]:
         if asset is None or asset.campaign_id != campaign.id:
             raise NotFound("La imagen no existe.")
     game_map = GameMap(campaign_id=campaign.id, origin="pdf" if body.background_asset_id else "manual",
-                       logic={"terrain": [], "doors": [], "lights": []}, explored=[], **body.model_dump())  # fmt: skip
+                       logic={"terrain": [], "doors": [], "lights": []}, explored=[], **body.model_dump())
     db.add(game_map)
     commit(db)
     return world.map_for_dm(game_map)
@@ -162,7 +162,7 @@ def create_entity(campaign: DmCampaign, body: EntityCreate, db: Db) -> dict[str,
     db.add(entity)
     db.flush()
     append_event(db, campaign.id, "entity_created", {"entity_id": entity.id, "name": entity.name}, actor_kind="dm",
-                 visibility="dm")  # fmt: skip
+                 visibility="dm")
     commit(db)
     return world.entity_for_dm(entity)
 
@@ -199,7 +199,7 @@ def move_entity(campaign: CampaignDep, entity_id: str, body: Move, db: Db, dm: I
 
         budget = movement_budget(db, campaign.id, entity.id, enforce_turn=not dm)
     result = world.move_entity(db, entity, body.x, body.y, budget_ft=budget, actor_kind="dm" if dm else "player",
-                               session_id=session.id if session else None)  # fmt: skip
+                               session_id=session.id if session else None)
     if session and session.state == "combat":
         from app.services.combat import spend_movement
 
@@ -244,7 +244,7 @@ def reveal(campaign: DmCampaign, fact_id: str, body: Reveal, db: Db) -> None:
     fact = _owned(db, Fact, campaign, fact_id)
     session = open_session(db, campaign.id)
     world.reveal_fact(db, fact, to=body.to, character_id=body.character_id,
-                      session_id=session.id if session else None)  # fmt: skip
+                      session_id=session.id if session else None)
     commit(db)
 
 
@@ -261,7 +261,7 @@ def list_npcs(campaign: CampaignDep, db: Db, dm: IsDm) -> list[dict[str, Any]]:
     if dm:
         return [NpcOut.model_validate(n).model_dump() for n in rows]
     return [{"id": n.id, "name": n.name, "description": n.public_description, "status": n.status}
-            for n in rows if n.known_to_party]  # fmt: skip
+            for n in rows if n.known_to_party]
 
 
 @router.post("/campaigns/{campaign_id}/npcs", response_model=NpcOut, status_code=201)
@@ -294,7 +294,7 @@ def list_quests(campaign: CampaignDep, db: Db, dm: IsDm) -> list[dict[str, Any]]
     if dm:
         return [QuestOut.model_validate(q).model_dump() for q in rows]
     return [{"id": q.id, "title": q.title, "description": q.description_public, "status": q.status}
-            for q in rows if q.status != "unknown"]  # fmt: skip
+            for q in rows if q.status != "unknown"]
 
 
 @router.post("/campaigns/{campaign_id}/quests", response_model=QuestOut, status_code=201)
@@ -313,7 +313,7 @@ def update_quest(campaign: DmCampaign, quest_id: str, body: QuestIn, db: Db) -> 
         setattr(quest, key, value)
     if previous != quest.status and quest.status != "unknown":
         append_event(db, campaign.id, "quest_updated", {"quest_id": quest.id, "title": quest.title,
-                     "status": quest.status}, actor_kind="dm")  # fmt: skip
+                     "status": quest.status}, actor_kind="dm")
     commit(db)
     return quest
 
@@ -340,11 +340,11 @@ def correct_memory(campaign: DmCampaign, memory_id: str, body: MemoryIn, db: Db)
     """Corrige un recuerdo sin borrarlo: crea uno nuevo y marca el anterior como reemplazado."""
     old = _owned(db, MemoryEntry, campaign, memory_id)
     entry = MemoryEntry(campaign_id=campaign.id, edited_by_dm=True, source_event_ids=old.source_event_ids,
-                        **body.model_dump())  # fmt: skip
+                        **body.model_dump())
     db.add(entry)
     db.flush()
     old.superseded_by = entry.id
     append_event(db, campaign.id, "memory_corrected", {"old": old.id, "new": entry.id}, actor_kind="dm",
-                 visibility="dm")  # fmt: skip
+                 visibility="dm")
     commit(db)
     return entry

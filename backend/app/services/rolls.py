@@ -105,10 +105,10 @@ def request_check(
     db.flush()
     session.state = "awaiting_roll"
     append_event(db, session.campaign_id, "roll_requested", public_roll(roll), actor_kind=requested_by,
-                 session_id=session.id)  # fmt: skip
+                 session_id=session.id)
     if not dc_public and dc is not None:
         append_event(db, session.campaign_id, "roll_dc", {"roll_id": roll.id, "dc": dc}, session_id=session.id,
-                     visibility="dm")  # fmt: skip
+                     visibility="dm")
     return roll
 
 
@@ -129,7 +129,7 @@ def _spec_from_roll(roll: DiceRoll) -> CheckSpec:
 def resolve_check(
     db: Session, campaign: Campaign, roll: DiceRoll, mode: str, values: list[int] | None = None,
     rng: dice.RandomSource | None = None,
-) -> DiceRoll:  # fmt: skip
+) -> DiceRoll:
     if roll.status != "pending":
         raise Conflict("Esta tirada ya se resolvió.")
     if campaign.dice_mode != "ask" and mode != campaign.dice_mode:
@@ -161,7 +161,7 @@ def resolve_check(
     if session and session.state == "awaiting_roll" and not pending_rolls_except(db, roll):
         session.state = "combat" if roll.context.get("combat") else "exploring"
     append_event(db, roll.campaign_id, "roll_resolved", {**public_roll(roll), "breakdown": outcome.breakdown},
-                 actor_kind="player", session_id=roll.session_id)  # fmt: skip
+                 actor_kind="player", session_id=roll.session_id)
     return roll
 
 
@@ -174,13 +174,13 @@ def void_roll(db: Session, roll: DiceRoll, reason: str) -> None:
         return
     roll.status = "void"
     append_event(db, roll.campaign_id, "roll_voided", {"roll_id": roll.id, "reason": reason}, actor_kind="dm",
-                 session_id=roll.session_id)  # fmt: skip
+                 session_id=roll.session_id)
 
 
 def free_roll(
     db: Session, campaign: Campaign, session: GameSession | None, expression: str, mode: str,
     values: list[int] | None, label: str, character_id: str | None, rng: dice.RandomSource | None = None,
-) -> dict[str, Any]:  # fmt: skip
+) -> dict[str, Any]:
     """Tirada libre (daño, tablas, etc.). Queda registrada igual que las demás."""
     result = dice.roll_manual(expression, values or []) if mode == "manual" else dice.roll(expression, rng)
     roll = DiceRoll(
@@ -202,5 +202,5 @@ def free_roll(
     db.flush()
     payload = {**public_roll(roll), "breakdown": result.describe()}
     append_event(db, campaign.id, "free_roll", payload, actor_kind="player",
-                 session_id=session.id if session else None)  # fmt: skip
+                 session_id=session.id if session else None)
     return payload

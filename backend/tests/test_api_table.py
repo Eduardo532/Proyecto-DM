@@ -80,11 +80,11 @@ def test_accion_libre_y_cierre_de_sesion(client: TestClient) -> None:
     t = setup_table(client)
     cid = t["cid"]
     assert client.post(f"/api/campaigns/{cid}/actions", json={"character_id": t["character"]["id"],
-                       "text": "x"}).status_code == 409  # fmt: skip
+                       "text": "x"}).status_code == 409
     session = client.post(f"/api/campaigns/{cid}/sessions").json()
     client.patch(f"/api/campaigns/{cid}/sessions/{session['id']}", json={"active_player_id": t["player"]["id"]})
     action = client.post(f"/api/campaigns/{cid}/actions", json={"character_id": t["character"]["id"],
-                         "text": "Examino el altar"})  # fmt: skip
+                         "text": "Examino el altar"})
     assert action.status_code == 202
     closed = client.post(f"/api/campaigns/{cid}/sessions/{session['id']}/close", json={}).json()
     assert closed["state"] == "closed"
@@ -96,6 +96,6 @@ def test_accion_libre_y_cierre_de_sesion(client: TestClient) -> None:
 def test_tirada_libre(client: TestClient) -> None:
     t = setup_table(client)
     result = client.post(f"/api/campaigns/{t['cid']}/rolls/free", json={"expression": "2d6+3", "mode": "manual",
-                         "values": [4, 5]}).json()  # fmt: skip
+                         "values": [4, 5]}).json()
     assert result["total"] == 12
     assert client.post(f"/api/campaigns/{t['cid']}/rolls/free", json={"expression": "2d7"}).status_code == 422
