@@ -7,10 +7,10 @@ Etiqueta visible: columna en letras y fila en número, p. ej. ``C7``.
 from __future__ import annotations
 
 import heapq
-from itertools import pairwise
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from enum import StrEnum
+from itertools import pairwise
 
 from app.engines.errors import RuleViolation
 
