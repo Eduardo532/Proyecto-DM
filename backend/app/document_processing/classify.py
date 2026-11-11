@@ -6,6 +6,7 @@ Principio: ante la duda, ``dm``. El DM puede corregir cualquier clasificación.
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass
 
 from app.engines.rules.abilities import SKILLS
@@ -32,10 +33,18 @@ INJECTION = re.compile(
     re.IGNORECASE,
 )
 
-# Nombres de habilidades en español e inglés -> identificador.
+
+
+def fold(text: str) -> str:
+    """Minúsculas y sin tildes, para comparar textos de PDF con o sin acentos."""
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
+# Nombres de habilidades en español e inglés (sin tildes) -> identificador.
 SKILL_NAMES: dict[str, str] = {}
 for _skill, (_ability, _label) in SKILLS.items():
-    SKILL_NAMES[_label.lower()] = _skill
+    SKILL_NAMES[fold(_label)] = _skill
     SKILL_NAMES[_skill.replace("_", " ")] = _skill
 SKILL_NAMES.update({"arcanos": "arcana", "c. arcano": "arcana", "trato con animales": "animal_handling"})
 SKILL_PATTERN = re.compile("|".join(sorted((re.escape(k) for k in SKILL_NAMES), key=len, reverse=True)), re.IGNORECASE)
@@ -77,8 +86,8 @@ def discoveries(text: str) -> list[Discovery]:
         match = DC_PATTERN.search(sentence)
         if not match:
             continue
-        skill_match = SKILL_PATTERN.search(sentence)
-        skill = SKILL_NAMES.get(skill_match.group(0).lower()) if skill_match else None
+        skill_match = SKILL_PATTERN.search(fold(sentence))
+        skill = SKILL_NAMES.get(skill_match.group(0)) if skill_match else None
         context = sentences[index - 1].strip() + " " if index > 0 and len(sentence) < 160 else ""
         found.append(Discovery(skill, int(match.group(1)), (context + sentence.strip())[:600]))
     return found
