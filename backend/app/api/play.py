@@ -48,8 +48,13 @@ def current_session(campaign: CampaignDep, db: Db) -> GameSession | None:
 
 @router.post("/campaigns/{campaign_id}/sessions", response_model=SessionOut, status_code=201)
 def start_session(campaign: CampaignDep, db: Db) -> GameSession:
+    existing = session_service.open_session(db, campaign.id)
     session = session_service.start_session(db, campaign)
     commit(db)
+    if existing is None:
+        from app.ai.turn import schedule_resume
+
+        schedule_resume(campaign.id, session.id)
     return session
 
 
@@ -64,8 +69,10 @@ def update_session(campaign: CampaignDep, session_id: str, body: SessionUpdate, 
         session.active_player_id = body.active_player_id
         append_event(db, campaign.id, "active_player", {"player_id": body.active_player_id,
                      "name": player.display_name if player else None}, session_id=session.id)
+    scene_changed = False
     if "scene_id" in fields:
         scene = db.get(Scene, body.scene_id) if body.scene_id else None
+        scene_changed = scene is not None and session.scene_id != body.scene_id
         if body.scene_id and (scene is None or scene.campaign_id != campaign.id):
             raise NotFound("La escena no existe.")
         session.scene_id = body.scene_id
@@ -74,6 +81,10 @@ def update_session(campaign: CampaignDep, session_id: str, body: SessionUpdate, 
             append_event(db, campaign.id, "scene_changed", {"scene_id": scene.id, "name": scene.name},
                          session_id=session.id)
     commit(db)
+    if scene_changed:
+        from app.ai.turn import schedule_scene_intro
+
+        schedule_scene_intro(campaign.id, session.id)
     return session
 
 

@@ -41,6 +41,21 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
     )
 
+    # --- IA (ver docs/guia-ollama.md) ---
+    llm_provider: Literal["ollama", "openai", "none"] = "ollama"
+    llm_base_url: str = "http://localhost:11434"
+    llm_api_key: str = ""
+    llm_model: str = "qwen3.5:2b"
+    llm_aux_model: str = ""  # clasificación y resúmenes; vacío = el mismo modelo
+    llm_context_budget: int = 5000  # tokens de entrada aproximados por llamada
+    llm_timeout_seconds: float = 180.0
+    llm_temperature: float = 0.7
+    llm_think: bool = False  # razonamiento ("thinking"): más calidad, más lento
+    embedding_model: str = "qwen3-embedding:0.6b"
+
+    # Servir la interfaz compilada (frontend/dist) desde el backend.
+    static_dir: Path | None = None
+
     @property
     def resolved_database_url(self) -> str:
         if self.database_url:

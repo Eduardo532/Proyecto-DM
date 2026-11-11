@@ -6,6 +6,7 @@ import logging
 from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any
 
+from app.ai.providers import DisabledProvider, LLMProvider, build_provider
 from app.config import Settings
 from app.db import Database
 
@@ -19,11 +20,13 @@ class Runtime:
         # Un solo trabajador: los turnos de una mesa se procesan en orden.
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="vdm-ai")
         self.synchronous = False  # en pruebas, ejecutar en el mismo hilo
+        self.provider: LLMProvider = DisabledProvider()
 
-    def configure(self, database: Database, settings: Settings) -> None:
+    def configure(self, database: Database, settings: Settings, provider: LLMProvider | None = None) -> None:
         self.database = database
         self.settings = settings
         self.synchronous = settings.environment == "test"
+        self.provider = provider or build_provider(settings)
 
     def submit(self, fn: Any, *args: Any) -> Future[Any] | None:
         if self.synchronous:

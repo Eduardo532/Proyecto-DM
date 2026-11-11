@@ -11,7 +11,7 @@ from app.main import create_app
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
     # _env_file=None: las pruebas no leen el backend/.env del desarrollador.
-    return Settings(_env_file=None, environment="test", data_dir=tmp_path / "data")
+    return Settings(_env_file=None, environment="test", data_dir=tmp_path / "data", llm_provider="none")
 
 
 @pytest.fixture
