@@ -43,6 +43,10 @@ function applyTool(logic: MapLogic, tool: Tool, x: number, y: number): MapLogic 
   }
 }
 
+function normalize(logic: Partial<MapLogic> | undefined): MapLogic {
+  return { ...logic, terrain: logic?.terrain ?? [], doors: logic?.doors ?? [], lights: logic?.lights ?? [] };
+}
+
 export function DmMaps({ campaignId }: { campaignId: string }) {
   const maps = useMaps(campaignId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -90,7 +94,7 @@ export function DmMaps({ campaignId }: { campaignId: string }) {
 
 function MapEditor({ campaignId, map }: { campaignId: string; map: GameMap }) {
   const entities = useEntities(campaignId);
-  const [logic, setLogic] = useState<MapLogic>({ terrain: [], doors: [], lights: [], ...map.logic });
+  const [logic, setLogic] = useState<MapLogic>(normalize(map.logic));
   const [tool, setTool] = useState<Tool>("wall");
   const [dirty, setDirty] = useState(false);
   const [calibration, setCalibration] = useState({
@@ -104,7 +108,7 @@ function MapEditor({ campaignId, map }: { campaignId: string; map: GameMap }) {
   });
   const save = useCampaignMutation<Record<string, unknown>>(campaignId, "PATCH", `/maps/${map.id}`);
   const remove = useCampaignMutation<null>(campaignId, "DELETE", `/maps/${map.id}`);
-  useEffect(() => setLogic({ terrain: [], doors: [], lights: [], ...map.logic }), [map.logic]);
+  useEffect(() => setLogic(normalize(map.logic)), [map.logic]);
   const preview: GameMap = { ...map, ...calibration, logic };
 
   return (

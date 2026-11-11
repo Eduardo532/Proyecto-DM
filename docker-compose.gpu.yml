@@ -1,0 +1,11 @@
+# Se añade automáticamente si se detecta una GPU NVIDIA con el NVIDIA Container Toolkit.
+# Manual: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
