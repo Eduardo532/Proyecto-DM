@@ -70,7 +70,7 @@ Al arrancar, el servidor crea la carpeta `data/` en la raíz del repositorio, cr
 1. Abre <http://127.0.0.1:8000/api/health>. Debes ver:
 
    ```json
-   {"status":"ok","version":"0.1.0","database":{"journal_mode":"wal","foreign_keys":true,"schema_revision":"0001"}}
+   {"status":"ok","version":"0.1.0","database":{"journal_mode":"wal","foreign_keys":true,"schema_revision":"0002"}}
    ```
 
 2. Abre <http://127.0.0.1:8000/docs> para ver la documentación interactiva de la API.
@@ -98,6 +98,31 @@ alembic revision --autogenerate -m "descripcion"   # crear una nueva tras cambia
 
 Revisa siempre el archivo generado antes de confirmarlo: en SQLite algunas operaciones necesitan ajustes.
 
-## 3. Integración continua
+## 3. Frontend
 
-Cada PR ejecuta en GitHub Actions, en **Ubuntu y Windows**: `ruff`, `mypy` y `pytest`. Un PR no se fusiona si alguno falla.
+Requiere Node.js 20 o superior. Con el backend en marcha en el puerto 8000:
+
+```bash
+cd frontend
+npm install --legacy-peer-deps
+npm run dev          # http://localhost:5173 (redirige /api y /ws al backend)
+npm run typecheck
+npm test
+npm run build        # genera frontend/dist
+```
+
+Para que el backend sirva la interfaz compilada (como en Docker): `VDM_STATIC_DIR=../frontend/dist`.
+
+## 4. IA en desarrollo
+
+Por defecto el backend usa Ollama en `http://localhost:11434` con `qwen3.5:2b` (ver [guía de Ollama](guia-ollama.md)). Sin Ollama la aplicación funciona igual y la narración avisa de que la IA no está disponible. Para desactivarla del todo: `VDM_LLM_PROVIDER=none`.
+
+## 5. Integración continua
+
+Cada PR ejecuta en GitHub Actions:
+
+- **Backend** en Ubuntu y Windows: `ruff check`, `mypy` y `pytest`.
+- **Frontend**: `tsc`, `vitest` y `vite build`.
+- **Docker**: validación de `docker compose`, construcción de la imagen y prueba de humo (arranca, responde la API y sirve la interfaz).
+
+Los errores se publican como anotaciones del PR. Un PR no se fusiona si algo falla.
