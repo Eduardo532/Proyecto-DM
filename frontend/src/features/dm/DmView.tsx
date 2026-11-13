@@ -10,7 +10,7 @@ import { DmSettings } from "./DmSettings";
 
 const TABS = [
   ["", "Escenas"],
-  ["documentos", "Documentos"],
+  ["documentos", "Importar"],
   ["mapas", "Mapas"],
   ["criaturas", "Criaturas y PNJ"],
   ["secretos", "Secretos y memoria"],

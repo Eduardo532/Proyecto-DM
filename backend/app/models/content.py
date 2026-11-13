@@ -38,6 +38,12 @@ class Document(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     log: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    # pdf = aventura procesada; sheet = ficha; archive = ZIP; image = imagen suelta; map_pdf = PDF con un mapa.
+    kind: Mapped[str] = mapped_column(String(20), default="pdf", server_default="pdf", nullable=False)
+    # Lo detectado al importar (un elemento por archivo): tipo, motivo, estado y referencia a lo creado.
+    manifest: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, server_default="[]", nullable=False)
+    # Documento contenedor (ZIP) del que salió este PDF. Sin clave foránea: es solo informativo.
+    parent_id: Mapped[str | None] = mapped_column(String(32))
 
     __table_args__ = (
         UniqueConstraint("campaign_id", "sha256"),
@@ -80,6 +86,12 @@ class DocumentAsset(Base):
     kind: Mapped[str] = mapped_column(String(20), default="unknown", nullable=False)
     knowledge_level: Mapped[str] = mapped_column(String(12), default="dm", nullable=False)
     caption: Mapped[str] = mapped_column(String(400), default="", nullable=False)
+    original_name: Mapped[str] = mapped_column(String(300), default="", server_default="", nullable=False)
+    # Mapas con varias versiones: misma clave de grupo y variante dm / player / grid / nogrid / zones.
+    group_key: Mapped[str] = mapped_column(String(200), default="", server_default="", nullable=False)
+    variant: Mapped[str] = mapped_column(String(20), default="", server_default="", nullable=False)
+    # Datos propios del tipo (marcadores: {"condition": "prone", "label": "Prone"}).
+    meta: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, server_default="{}", nullable=False)
 
     __table_args__ = (CheckConstraint(KNOWLEDGE_CHECK, name="knowledge_level"),)
 
@@ -112,6 +124,10 @@ class GameMap(TimestampMixin, Base):
     grid_offset_x: Mapped[float] = mapped_column(default=0.0, nullable=False)
     grid_offset_y: Mapped[float] = mapped_column(default=0.0, nullable=False)
     cell_size_px: Mapped[float] = mapped_column(default=50.0, nullable=False)
+    # Alto de casilla si no es cuadrada (None = igual que el ancho).
+    cell_height_px: Mapped[float | None] = mapped_column()
+    # Imagen que solo ve el DM (versión con notas o numeración). Sin clave foránea: si falta, se usa la normal.
+    dm_background_asset_id: Mapped[str | None] = mapped_column(String(32))
     ambient_light: Mapped[str] = mapped_column(String(10), default="bright", nullable=False)
     # Capa lógica: {"terrain": [[x, y, "wall"], ...], "doors": [[x, y, "closed"], ...], "lights": [...]}
     logic: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)

@@ -52,6 +52,8 @@ class MapUpdate(BaseModel):
     grid_offset_x: float | None = None
     grid_offset_y: float | None = None
     cell_size_px: float | None = Field(default=None, gt=2)
+    # Enviar null explícitamente vuelve a casillas cuadradas.
+    cell_height_px: float | None = Field(default=None, gt=2)
     ambient_light: Literal["bright", "dim", "dark"] | None = None
     fog_enabled: bool | None = None
     logic: dict[str, Any] | None = None

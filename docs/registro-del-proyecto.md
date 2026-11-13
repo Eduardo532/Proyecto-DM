@@ -2,10 +2,11 @@
 
 Registro vivo pedido en la sección 21 del prompt maestro. Se actualiza en cada PR.
 
-## Estado actual (2026-11-11)
+## Estado actual (2026-11-13)
 
 - **MVP completo y ejecutable con un solo comando** (`./iniciar.sh` o `iniciar.bat`).
-- **Verificado automáticamente** en cada PR: 69 pruebas de backend (Ubuntu y Windows), 5 de frontend, compilación de la interfaz y construcción y arranque de la imagen Docker.
+- **Importación universal** (PR #24): aventuras, packs ZIP, mapas con variantes, fichas de D&D Beyond / Nivel20 / hoja oficial / impresas, ilustraciones, tokens y marcadores de estado.
+- **Verificado automáticamente** en cada PR: 81 pruebas de backend (Ubuntu y Windows), 5 de frontend, compilación de la interfaz y construcción y arranque de la imagen Docker.
 - **Pendiente de verificar en tu equipo:** el arranque con Docker y GPU en tu Linux, y la calidad real de la IA con `qwen3.5:2b`. Las pruebas de la IA usan un modelo simulado; no he podido ejecutar un modelo real en mi entorno.
 
 ## Funcionalidades terminadas
@@ -18,7 +19,8 @@ Registro vivo pedido en la sección 21 del prompt maestro. Se actualiza en cada 
 | Mapas | Cuadrícula, distancias 5e y 5-10-5, Dijkstra con terreno difícil y ocupación, puertas, línea de visión, iluminación, visión en la oscuridad, niebla de grupo, editor de capa lógica, calibración de imágenes | Pruebas de motor y API |
 | Datos | 19 tablas, migraciones Alembic, eventos inmutables por disparador, FTS5 | Prueba modelos = migraciones |
 | API | REST + WebSocket, modo DM con PIN y token temporal, proyecciones que no envían secretos a la mesa | Pruebas de extremo a extremo de la API |
-| PDF | Extracción con PyMuPDF, OCR con Tesseract, encabezados y áreas numeradas → escenas, texto en voz alta → público, bloques de estadísticas → DM, frases con CD → hechos con habilidad y CD, tablas, imágenes y detección de mapas, revisión manual | PDF de prueba propio |
+| Importación | Un punto de subida para PDF, imágenes y ZIP anidados (límites contra rutas peligrosas y archivos desmesurados); reconocimiento por contenido; manifiesto por archivo con tipo, motivo y estado; fichas como borrador hasta confirmar; mapas agrupados por variante con cuadrícula detectada (también rectangular) e imagen del DM aparte; marcadores de estado sobre los tokens | Pruebas con PDF e imágenes sintéticos; reconocimiento, lectura de fichas y cuadrícula comprobados con packs reales de DMsGuild y fichas de Nivel20 (no incluidos en el repositorio) |
+| PDF | Extracción con PyMuPDF, OCR con Tesseract, orden de lectura a dos columnas, títulos con letras duplicadas, encabezados y áreas numeradas → escenas, lugares sin numerar con texto en voz alta → escenas, texto en voz alta → público, bloques de estadísticas → DM, frases con CD → hechos con habilidad y CD, tablas, imágenes y detección de mapas, revisión manual | PDF de prueba propio |
 | Búsqueda (RAG) | Híbrida palabras + embeddings (`qwen3-embedding`) con filtro de nivel dentro de la consulta | Pruebas: la mesa no encuentra secretos |
 | IA | Ollama o API compatible con OpenAI; canal fijo (clasificar → motor → narrar), CD del PDF por encima de la del modelo, revelación solo con éxito, filtro de fugas con reescritura, diálogo con PNJ y memoria, narración de escenas y "Anteriormente…", resumen de sesión con modelo y respaldo determinista | Pruebas con modelo simulado |
 | Interfaz | Biblioteca, mesa (narración, selector de jugador, acciones, tiradas), mapa con niebla, fichas y editor, diario, combate, panel DM completo | `tsc`, `vitest`, `vite build` |
@@ -41,7 +43,9 @@ Registro vivo pedido en la sección 21 del prompt maestro. Se actualiza en cada 
 ## Errores y limitaciones conocidos
 
 - **Imagen completa del mapa:** la niebla se dibuja en la interfaz sobre la imagen del PDF; la imagen original sí se envía al navegador. Con pantalla compartida no es un problema práctico, pero un jugador que abra la URL de la imagen vería el mapa entero.
-- **PDF con varias columnas o maquetación compleja:** el orden de lectura puede mezclar columnas y las escenas solo se detectan con títulos numerados. Hay que revisar la clasificación en *Documentos*.
+- **PDF con maquetación compleja:** el orden a dos columnas se resuelve, pero recuadros laterales o tres columnas pueden mezclarse. Revisa la clasificación en *Importar*.
+- **Fichas por posición (Nivel20, hojas impresas):** se leen por etiquetas y posiciones; si una plataforma cambia su diseño puede faltar algún dato. El borrador avisa de lo que no encontró (p. ej. espacios de conjuro estimados) y se puede corregir antes de crear el personaje. Las fichas de Nivel20 no incluyen inventario si el personaje no lo tiene.
+- **Cuadrícula automática:** funciona con cuadrículas visibles; en mapas sin cuadrícula se usa un tamaño aproximado (≈30 casillas en el lado largo) que hay que ajustar. Si el pack trae versión *con cuadrícula*, se mide en ella y a la mesa se le muestra la versión limpia.
 - **Modelos pequeños:** con 2–4 B parámetros la clasificación de acciones puede fallar; el sistema pide aclaración o trata la acción como automática, y el motor impone siempre la CD y las reglas.
 - **Primer arranque:** la descarga de modelos (~3 GB) puede tardar; hasta entonces la IA avisa de que no está disponible.
 - **Datos en `./data` con Docker en Linux:** los archivos quedan como propiedad de `root`.
@@ -69,6 +73,10 @@ Registro vivo pedido en la sección 21 del prompt maestro. Se actualiza en cada 
 | D-17 | Distribución con Docker Compose y un solo comando; la interfaz la sirve el backend | Aplicada | [docker](./docker.md) |
 | D-18 | Enemigos con táctica determinista; el modelo solo narra su turno (no depende de la velocidad del modelo) | Aplicada | — |
 | D-19 | Fusión de PR por Claude cuando la CI está en verde (por indicación del propietario) | Aplicada | — |
+| D-20 | Importación universal: cada archivo subido es un `Document` con `kind` y `manifest`; los PDF de un ZIP son documentos hijos (`parent_id`) | Aplicada | — |
+| D-21 | Migraciones que solo añaden columnas (sin recrear tablas, para no disparar claves foráneas en SQLite); referencias nuevas sin clave foránea (`dm_background_asset_id`) | Aplicada | — |
+| D-22 | Las fichas importadas no crean personajes hasta que el DM confirma (borrador en el manifiesto) | Aplicada | — |
+| D-23 | El material de terceros usado para ajustar el importador no se sube al repositorio; las pruebas usan documentos sintéticos | Aplicada | — |
 
 ## Próxima tarea
 

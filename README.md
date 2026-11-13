@@ -15,7 +15,7 @@ cd Proyecto-DM
 iniciar.bat           # Windows (doble clic)
 ```
 
-Abre <http://localhost:8000>. La primera vez se descargan los modelos de IA (unos 3 GB) en segundo plano; mientras tanto ya puedes crear la campaña, los personajes y cargar el PDF.
+Abre <http://localhost:8000>. La primera vez se descargan los modelos de IA (unos 3 GB) en segundo plano; mientras tanto ya puedes crear la campaña e importar la aventura, los mapas y las fichas.
 
 Para detenerlo: `./detener.sh` o `detener.bat`. Las partidas se guardan en la carpeta `data/`.
 
@@ -24,11 +24,12 @@ Para detenerlo: `./detener.sh` o `detener.bat`. Las partidas se guardan en la ca
 | Área | Funciona |
 |---|---|
 | Campañas | Biblioteca, PIN del modo DM, dados digitales o físicos |
-| PDF | Importación, OCR de páginas escaneadas, detección de escenas, texto para leer en voz alta, bloques de estadísticas, CD y habilidades, imágenes y mapas; revisión de qué puede saber la mesa |
+| Importación | PDF, imágenes y ZIP (también ZIP dentro de ZIP). Reconoce aventuras (también a dos columnas), fichas de personaje (D&D Beyond, Nivel20, hoja oficial rellenable o impresa), mapas con sus versiones DM / jugadores / con y sin cuadrícula, ilustraciones, tokens y marcadores de estado |
+| Aventuras | OCR de páginas escaneadas, detección de escenas, texto para leer en voz alta, bloques de estadísticas, CD y habilidades; revisión de qué puede saber la mesa |
 | IA (Ollama local) | Narración de escenas, interpretación de acciones libres, petición de tiradas con CD oculta, revelación de secretos solo con éxito, diálogo con PNJ, resúmenes de sesión, filtro de fugas de secretos |
 | Reglas 5e 2014 | Características, habilidades, salvaciones, ventaja/desventaja, daño con resistencias, PG temporales, 0 PG y salvaciones contra muerte, condiciones y agotamiento |
 | Personajes | Fichas completas con valores calculados, historial de cambios, varios jugadores en una pantalla con selector de jugador activo |
-| Mapas | Imagen del PDF calibrada con cuadrícula, editor de paredes/puertas/terreno/luces, fichas, movimiento validado, línea de visión, visión en la oscuridad y niebla de guerra |
+| Mapas | Imágenes importadas con cuadrícula detectada automáticamente (también casillas rectangulares), versión del DM aparte, editor de paredes/puertas/terreno/luces, fichas, movimiento validado, línea de visión, visión en la oscuridad y niebla de guerra |
 | Combate | Iniciativa, turnos, acción/adicional/movimiento, Correr, Retirarse, enemigos que se mueven y atacan solos |
 | Memoria | Registro inmutable de eventos, hechos conocidos, memoria de PNJ, resúmenes, "Anteriormente…" al reanudar |
 
@@ -45,5 +46,5 @@ Lo que falta o tiene límites conocidos está en el [registro del proyecto](docs
 
 ## Licencias y contenido
 
-- Las aventuras en PDF que cargues se quedan en tu equipo (`data/`, excluido de Git) y no se redistribuyen.
+- Las aventuras, mapas y fichas que importes se quedan en tu equipo (`data/`, excluido de Git) y no se redistribuyen.
 - Las reglas proceden del System Reference Document 5.1 de Wizards of the Coast, bajo licencia [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/legalcode). Este proyecto no está afiliado a Wizards of the Coast.

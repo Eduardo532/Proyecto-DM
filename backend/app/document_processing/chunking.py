@@ -14,6 +14,14 @@ AREA_HEADING = re.compile(
 )
 
 
+GENERIC_HEADINGS = re.compile(
+    r"^(?:introducci[oó]n|introduction|cr[eé]ditos|credits|ap[eé]ndice|appendix|trasfondo|background|resumen|"
+    r"overview|synopsis|sinopsis|conclusi[oó]n|conclusion|aftermath|epilogue|ep[ií]logo|legal|license|licencia|"
+    r"cap[ií]tulo \d+|chapter \d+|parte \d+|part \d+|contents|[ií]ndice|tabla de contenidos)\b",
+    re.IGNORECASE,
+)
+
+
 @dataclass
 class Piece:
     text: str
@@ -51,6 +59,8 @@ def build_pieces(blocks: list[Block], body_size: float) -> list[Piece]:
     pieces: list[Piece] = []
     path: list[tuple[int, str]] = []
     area: str | None = None
+    heading: tuple[int, str] | None = None
+    heading_index = 0
     buffer: list[Block] = []
 
     def section_name() -> str:
@@ -72,8 +82,15 @@ def build_pieces(blocks: list[Block], body_size: float) -> list[Piece]:
             path = [p for p in path if p[0] < level] + [(level, title)]
             match = AREA_HEADING.match(title)
             area = title if match else (area if level >= 3 else None)
+            heading, heading_index = (level, title), len(pieces)
             continue
         is_read_aloud = block.italic or block.boxed
+        if is_read_aloud and area is None and heading and heading[0] >= 2 and not GENERIC_HEADINGS.match(heading[1]):
+            # Lugar sin numerar («La sala de las ofrendas») con texto para leer en voz alta: es una escena.
+            flush()
+            area = heading[1]
+            for earlier in pieces[heading_index:]:
+                earlier.area = earlier.area or area
         if is_read_aloud or STAT_BLOCK.search(block.text):
             flush()
             pieces.append(Piece(block.text.strip(), block.page, block.page, section_name(), is_read_aloud, area))

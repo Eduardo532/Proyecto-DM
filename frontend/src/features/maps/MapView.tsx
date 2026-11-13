@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { api, imageUrl } from "../../api/client";
-import { useCombat, useEntities, useMap, useMaps, useScenes, useSession } from "../../api/hooks";
+import { useCombat, useEntities, useMap, useMaps, useMarkers, useScenes, useSession } from "../../api/hooks";
 import type { EntityView } from "../../api/types";
 import { Empty, ErrorText, Panel, Select } from "../../components/ui";
 import { useIsDm } from "../../stores/dm";
@@ -21,6 +21,14 @@ export function MapView({ campaignId }: { campaignId: string }) {
   const entities = useEntities(campaignId);
   const combat = useCombat(campaignId);
   const [selected, setSelected] = useState<EntityView | null>(null);
+  const markers = useMarkers(campaignId);
+  const markerUrls = useMemo(
+    () =>
+      Object.fromEntries(
+        (markers.data ?? []).filter((m) => m.condition).map((m) => [m.condition as string, imageUrl(campaignId, `/assets/${m.asset_id}/image`)]),
+      ),
+    [markers.data, campaignId],
+  );
   const client = useQueryClient();
   const move = useMutation({
     mutationFn: ({ entity, x, y }: { entity: EntityView; x: number; y: number }) =>
@@ -62,6 +70,7 @@ export function MapView({ campaignId }: { campaignId: string }) {
             entities={entities.data ?? []}
             backgroundUrl={map.data.has_background ? imageUrl(campaignId, `/maps/${map.data.id}/image`) : null}
             dm={dm}
+            markerUrls={markerUrls}
             selectedEntityId={selected?.id}
             onEntityClick={(entity) => (dm || entity.kind === "character" ? setSelected(entity) : undefined)}
             onCellClick={(x, y) => {

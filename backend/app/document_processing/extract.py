@@ -11,6 +11,9 @@ from typing import Any
 
 import pymupdf as _pymupdf_module
 
+from app.document_processing.layout import reading_order
+from app.importing.pdftext import undouble_line
+
 # PyMuPDF solo está tipado en parte: se trata como Any para no ocultar errores reales con ignores.
 pymupdf: Any = _pymupdf_module
 
@@ -90,6 +93,7 @@ def extract(path: Path, assets_dir: Path, min_image_px: int = 200) -> Extraction
         boxes = _filled_rects(page)
         data = _page_dict(page, extraction, index)
         page_area = page.rect.width * page.rect.height or 1
+        page_blocks: list[Block] = []
         for block in data["blocks"]:
             if block.get("type") != 0:
                 continue
@@ -97,7 +101,7 @@ def extract(path: Path, assets_dir: Path, min_image_px: int = 200) -> Extraction
             if not spans:
                 continue
             text = "\n".join(
-                "".join(s["text"] for s in line["spans"]).strip() for line in block["lines"]
+                undouble_line("".join(s["text"] for s in line["spans"]).strip()) for line in block["lines"]
             ).strip()
             if not text:
                 continue
@@ -111,7 +115,7 @@ def extract(path: Path, assets_dir: Path, min_image_px: int = 200) -> Extraction
             center = pymupdf.Point((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)
             boxed = any(rect.contains(center) for rect in boxes)
             sizes[size] += len(text)
-            extraction.blocks.append(
+            page_blocks.append(
                 Block(
                     page=index + 1,
                     text=text,
@@ -122,6 +126,7 @@ def extract(path: Path, assets_dir: Path, min_image_px: int = 200) -> Extraction
                     bbox=(bbox[0], bbox[1], bbox[2], bbox[3]),
                 )
             )
+        extraction.blocks.extend(reading_order(page_blocks, float(page.rect.width)))
         try:
             for table in page.find_tables().tables:
                 rows = [[str(c or "").strip() for c in row] for row in table.extract()]

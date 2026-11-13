@@ -119,7 +119,7 @@ def update_map(campaign: DmCampaign, map_id: str, body: MapUpdate, db: Db) -> di
     game_map = _owned(db, GameMap, campaign, map_id)
     data = body.model_dump(exclude_unset=True, exclude={"reset_fog"})
     for key, value in data.items():
-        if value is not None:
+        if value is not None or key == "cell_height_px":
             setattr(game_map, key, value)
     if body.logic is not None:
         world.grid_for(game_map)  # valida la capa lógica
@@ -132,12 +132,53 @@ def update_map(campaign: DmCampaign, map_id: str, body: MapUpdate, db: Db) -> di
 
 
 @router.get("/campaigns/{campaign_id}/maps/{map_id}/image")
-def map_image(campaign: CampaignDep, map_id: str, db: Db) -> FileResponse:
+def map_image(campaign: CampaignDep, map_id: str, db: Db, dm: IsDm, variant: str = "player",
+              dm_token: str | None = None) -> FileResponse:
+    from app.services.dm_auth import tokens
+
     game_map = _owned(db, GameMap, campaign, map_id)
-    asset = db.get(DocumentAsset, game_map.background_asset_id) if game_map.background_asset_id else None
+    asset = None
+    if variant == "dm":
+        if not (dm or tokens.check(dm_token, campaign.id)):
+            raise Forbidden("La versión del DM requiere el modo DM.")
+        if game_map.dm_background_asset_id:
+            asset = db.get(DocumentAsset, game_map.dm_background_asset_id)
+    if asset is None or not Path(asset.file_path).is_file():
+        asset = db.get(DocumentAsset, game_map.background_asset_id) if game_map.background_asset_id else None
     if asset is None or not Path(asset.file_path).is_file():
         raise NotFound("El mapa no tiene imagen.")
     return FileResponse(asset.file_path)
+
+
+@router.post("/campaigns/{campaign_id}/maps/{map_id}/detect-grid", response_model=dict[str, Any])
+def detect_grid(campaign: DmCampaign, map_id: str, db: Db) -> dict[str, Any]:
+    """Mide la cuadrícula de la imagen de fondo (o de su versión con cuadrícula) y ajusta el mapa."""
+    from app.engines.errors import RuleViolation
+    from app.importing.maps import GRID_CONFIDENCE, cells_for, estimate_grid
+
+    game_map = _owned(db, GameMap, campaign, map_id)
+    background = db.get(DocumentAsset, game_map.background_asset_id) if game_map.background_asset_id else None
+    if background is None:
+        raise RuleViolation("El mapa no tiene imagen de fondo.")
+    source = background
+    if background.group_key:
+        sibling = db.scalar(select(DocumentAsset).where(
+            DocumentAsset.campaign_id == campaign.id, DocumentAsset.group_key == background.group_key,
+            DocumentAsset.variant == "grid", DocumentAsset.width == background.width,
+            DocumentAsset.height == background.height))
+        source = sibling or background
+    guess = estimate_grid(Path(source.file_path))
+    if guess is None or guess.confidence < GRID_CONFIDENCE:
+        raise RuleViolation("No se ve una cuadrícula clara en la imagen. Ajusta el tamaño de casilla a mano.")
+    game_map.cell_size_px = guess.cell_w
+    game_map.cell_height_px = None if guess.square else guess.cell_h
+    game_map.grid_offset_x, game_map.grid_offset_y = guess.offset_x, guess.offset_y
+    game_map.width_cells, game_map.height_cells = cells_for(
+        int(background.width - guess.offset_x), int(background.height - guess.offset_y), guess.cell_w, guess.cell_h)
+    world.update_fog(db, game_map)
+    append_event(db, campaign.id, "map_updated", {"map_id": game_map.id})
+    commit(db)
+    return {**world.map_for_dm(game_map), "grid_confidence": guess.confidence}
 
 
 @router.delete("/campaigns/{campaign_id}/maps/{map_id}", status_code=204)

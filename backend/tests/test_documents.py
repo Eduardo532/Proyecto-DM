@@ -46,7 +46,7 @@ def test_importacion_y_busqueda_filtrada(client: TestClient, tmp_path: Path) -> 
     assert client.get(f"/api/campaigns/{cid}/search", params={"q": "Varis"}).json()
 
 
-def test_solo_pdf(client: TestClient) -> None:
+def test_formato_no_admitido(client: TestClient) -> None:
     t = setup_table(client)
     response = client.post(f"/api/campaigns/{t['cid']}/documents", files={"file": ("x.txt", b"hola", "text/plain")},
                            headers=t["dm"])
