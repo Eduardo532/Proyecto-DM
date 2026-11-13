@@ -111,7 +111,9 @@ function MapEditor({ campaignId, map }: { campaignId: string; map: GameMap }) {
   const remove = useCampaignMutation<null>(campaignId, "DELETE", `/maps/${map.id}`);
   const detect = useCampaignMutation<null, GameMap & { grid_confidence: number }>(campaignId, "POST", `/maps/${map.id}/detect-grid`);
   const [dmVersion, setDmVersion] = useState(map.has_dm_background);
-  useEffect(() => setLogic(normalize(map.logic)), [map.logic]);
+  useEffect(() => {
+    setLogic(normalize(map.logic));
+  }, [map.logic]);
   const preview: GameMap = { ...map, ...calibration, logic };
 
   return (
