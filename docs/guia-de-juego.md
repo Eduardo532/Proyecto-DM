@@ -34,6 +34,7 @@
 
 1. **Comenzar la aventura** (la primera vez): en **Mesa** pulsa el botón grande. El DM virtual presenta la historia, nombra a los personajes, os lleva a la primera escena y pregunta qué hacéis. Usa la *Presentación de la campaña* que escribas (o propongas con la IA) en **Modo DM → Ajustes**; si la IA no está disponible, lee esa presentación y el texto de la primera escena.
 2. **Sesiones siguientes:** *Iniciar sesión* (arriba a la derecha) y el DM narra un "Anteriormente…". Para cambiar de escena: **Modo DM → Escenas → Activar**.
+   - **🔊 Voz del DM:** actívala encima de la narración y el DM leerá en voz alta cada narración nueva (los PNJ que hablan usan otra voz). Puedes elegir voz y velocidad, pulsar ▶ junto a cualquier texto para volver a oírlo o ⏹ para callarlo. Usa la voz neuronal local (Kokoro); si no está lista, la del navegador.
 3. En **Mesa**, elige al jugador activo (o pulsa *Siguiente →*) y elige cómo interviene:
    - **🗡️ Hacer algo:** *"Examino el altar buscando mecanismos"*. El DM decide si hace falta una tirada.
    - **💬 Hablar:** *"¿Hay habitaciones libres?"*, una frase al grupo o una pregunta al DM (*"¿Qué sé de este pueblo?"*). Responde el PNJ presente o el DM, sin tiradas.

@@ -26,6 +26,7 @@ Para detenerlo: `./detener.sh` o `detener.bat`. Las partidas se guardan en la ca
 | Campañas | Biblioteca, PIN del modo DM, dados digitales o físicos |
 | Importación | PDF, imágenes y ZIP (también ZIP dentro de ZIP). Reconoce aventuras (también a dos columnas), fichas de personaje (D&D Beyond, Nivel20, hoja oficial rellenable o impresa), mapas con sus versiones DM / jugadores / con y sin cuadrícula, ilustraciones, tokens y marcadores de estado |
 | Aventuras | OCR de páginas escaneadas, detección de escenas, texto para leer en voz alta, bloques de estadísticas, CD y habilidades; revisión de qué puede saber la mesa |
+| Voz del DM | Narración leída en voz alta con una voz neuronal local (Kokoro, español), voz propia para los PNJ y respaldo con la voz del navegador |
 | IA (Ollama local) | Narración de escenas, interpretación de acciones libres, petición de tiradas con CD oculta, revelación de secretos solo con éxito, diálogo con PNJ, resúmenes de sesión, filtro de fugas de secretos |
 | Reglas 5e 2014 | Características, habilidades, salvaciones, ventaja/desventaja, daño con resistencias, PG temporales, 0 PG y salvaciones contra muerte, condiciones y agotamiento |
 | Personajes | Fichas completas con valores calculados, historial de cambios, varios jugadores en una pantalla con selector de jugador activo |

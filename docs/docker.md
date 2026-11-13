@@ -58,6 +58,15 @@ Con tu equipo de referencia (NVIDIA de 4 GB y 24 GB de RAM):
 | `qwen3.5:2b` (por defecto) | Cabe entero en la GPU: respuestas rápidas |
 | `qwen3.5:4b` | Mejor narración; parte del modelo va a la RAM y responde más lento |
 
+## Voz del DM
+
+El servicio `voz` ejecuta [Kokoro](https://github.com/remsky/Kokoro-FastAPI), una voz neuronal local y gratuita, en la CPU (así no compite con el modelo de lenguaje por la memoria de la tarjeta gráfica). La primera vez se descarga su imagen.
+
+- Voces en español: `em_alex` (por defecto), `em_santa` (hombre) y `ef_dora` (mujer). Se eligen en la Mesa (botón 🔊) o con `VDM_TTS_VOICE` en `.env`.
+- Sin el servicio, o mientras arranca, la Mesa usa la voz del navegador (en Windows, Edge tiene voces «Natural» en español muy buenas).
+- Desactivarlo: `VDM_TTS_URL=` en `.env` y `docker compose stop voz`.
+- Otro servidor compatible con la API de OpenAI (`/v1/audio/speech`): pon su dirección en `VDM_TTS_URL`.
+
 ## Copias de seguridad
 
 Todo está en la carpeta `data/`: la base de datos `vdm.sqlite3`, los PDF y las imágenes. Para hacer una copia, detén la aplicación y copia la carpeta entera. Los modelos de Ollama están en el volumen `virtual-dm_ollama` y se pueden volver a descargar.
