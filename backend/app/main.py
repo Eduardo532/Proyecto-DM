@@ -18,7 +18,7 @@ from fastapi.responses import FileResponse
 
 from app.ai.providers import LLMProvider
 from app.ai.runtime import runtime
-from app.api import campaigns, characters, combat, documents, health, play, world, ws
+from app.api import campaigns, characters, combat, documents, health, play, voice, world, ws
 from app.api.errors import install as install_error_handlers
 from app.config import Settings, get_settings
 from app.db import Database
@@ -51,7 +51,7 @@ def create_app(settings: Settings | None = None, provider: LLMProvider | None = 
         allow_headers=["*"],
     )
     install_error_handlers(app)
-    for module in (health, campaigns, characters, play, world, combat, documents):
+    for module in (health, campaigns, characters, play, world, combat, documents, voice):
         app.include_router(module.router, prefix="/api")
     app.include_router(ws.router)
     if resolved.static_dir and (resolved.static_dir / "index.html").is_file():

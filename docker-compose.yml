@@ -29,6 +29,12 @@ services:
       - ollama pull "$${MODEL}" && ollama pull "$${EMBEDDING}" && echo "Modelos listos."
     restart: "no"
 
+  # Voz del DM: Kokoro (texto a voz neuronal, local y gratuito) en CPU para no quitarle memoria de vídeo al modelo.
+  # La primera vez descarga la imagen; sin este servicio la interfaz usa la voz del navegador.
+  voz:
+    image: ${VDM_TTS_IMAGE:-ghcr.io/remsky/kokoro-fastapi-cpu:latest}
+    restart: unless-stopped
+
   app:
     build: .
     image: virtual-dm:local
@@ -44,6 +50,8 @@ services:
       VDM_LLM_MODEL: ${VDM_LLM_MODEL:-qwen3.5:2b}
       VDM_EMBEDDING_MODEL: ${VDM_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
       VDM_LLM_CONTEXT_BUDGET: ${VDM_LLM_CONTEXT_BUDGET:-5000}
+      VDM_TTS_URL: ${VDM_TTS_URL:-http://voz:8880}
+      VDM_TTS_VOICE: ${VDM_TTS_VOICE:-em_alex}
     volumes:
       - ./data:/data
 

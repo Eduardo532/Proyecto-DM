@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../../api/client";
@@ -17,7 +17,9 @@ import type { Character, GameEvent, Player, Roll } from "../../api/types";
 import { Badge, Button, Empty, ErrorText, HpBar, Input, Panel } from "../../components/ui";
 import { eventSummary, outcomeLabel } from "../../lib/events";
 import { CONDITIONS, signed } from "../../lib/rules";
+import { narrator, type VoiceStatus } from "../../lib/voice";
 import { useTableStore } from "../../stores/table";
+import { useVoiceStore } from "../../stores/voice";
 
 export function TableView({ campaignId }: { campaignId: string }) {
   return (
@@ -145,8 +147,97 @@ function StartAdventure({ campaignId }: { campaignId: string }) {
   );
 }
 
+function useVoiceStatus() {
+  return useQuery({
+    queryKey: ["voice-status"],
+    queryFn: () => api<VoiceStatus>("/voice/status"),
+    refetchInterval: (query) => (query.state.data?.available ? false : 20_000),
+  });
+}
+
+/** Lee en voz alta cada narración nueva (no el historial que ya estaba al abrir la mesa). */
+function useNarrationVoice(events: GameEvent[] | undefined) {
+  const status = useVoiceStatus();
+  const { enabled, voice, speed } = useVoiceStore();
+  const lastSeq = useRef<number | null>(null);
+  useEffect(() => {
+    if (!events) return;
+    const newest = events.reduce((max, e) => Math.max(max, e.seq), 0);
+    if (lastSeq.current === null) {
+      lastSeq.current = newest;
+      return;
+    }
+    const fresh = events.filter((e) => e.seq > (lastSeq.current ?? 0) && e.type === "narration");
+    lastSeq.current = Math.max(lastSeq.current, newest);
+    if (!enabled) return;
+    for (const event of fresh) {
+      const p = event.payload as Record<string, unknown>;
+      narrator.speak(String(p.text ?? ""), {
+        voice: voice || status.data?.default || "",
+        speed,
+        serverAvailable: Boolean(status.data?.available),
+        serverVoices: status.data?.voices ?? [],
+        speaker: p.speaker ? String(p.speaker) : null,
+      });
+    }
+  }, [events, enabled, voice, speed, status.data]);
+  useEffect(() => {
+    if (!enabled) narrator.stop();
+  }, [enabled]);
+}
+
+function VoiceControls() {
+  const status = useVoiceStatus();
+  const { enabled, voice, speed, setEnabled, setVoice, setSpeed } = useVoiceStore();
+  const voices = status.data?.voices ?? [];
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <Button
+        variant={enabled ? "primary" : "ghost"}
+        onClick={() => {
+          const next = !enabled;
+          setEnabled(next);
+          if (next) narrator.speak("La voz del Dungeon Master está lista.", { voice: voice || status.data?.default || "", speed, serverAvailable: Boolean(status.data?.available) });
+        }}
+        aria-pressed={enabled}
+      >
+        {enabled ? "🔊 Voz del DM" : "🔈 Voz del DM (apagada)"}
+      </Button>
+      {enabled && (
+        <>
+          {voices.length > 0 && (
+            <select className="rounded border border-line bg-ink px-2 py-1" value={voice || status.data?.default || ""} onChange={(e) => setVoice(e.target.value)} aria-label="Voz">
+              {voices.map((v) => (
+                <option key={v} value={v}>
+                  {VOICE_LABELS[v] ?? v}
+                </option>
+              ))}
+            </select>
+          )}
+          <select className="rounded border border-line bg-ink px-2 py-1" value={speed} onChange={(e) => setSpeed(Number(e.target.value))} aria-label="Velocidad">
+            {[0.85, 1, 1.1, 1.25].map((s) => (
+              <option key={s} value={s}>
+                {s === 1 ? "Velocidad normal" : `×${s}`}
+              </option>
+            ))}
+          </select>
+          <Button onClick={() => narrator.stop()}>⏹ Callar</Button>
+          <span className="text-xs text-parchment-dim">{status.data?.available ? "Voz neuronal local (Kokoro)" : status.data?.message || "Voz del navegador"}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+const VOICE_LABELS: Record<string, string> = {
+  em_alex: "Álex (narrador)",
+  em_santa: "Santa (voz grave)",
+  ef_dora: "Dora (narradora)",
+};
+
 function Narration({ campaignId }: { campaignId: string }) {
   const events = useEvents(campaignId);
+  useNarrationVoice(events.data);
   const aiBusy = useTableStore((s) => s.aiBusy);
   const bottom = useRef<HTMLDivElement>(null);
   const items = useMemo(() => (events.data ?? []).filter((e) => e.type === "narration" || e.type === "player_action" || eventSummary(e)), [events.data]);
@@ -157,6 +248,8 @@ function Narration({ campaignId }: { campaignId: string }) {
   }, [items.length, aiBusy]);
 
   return (
+    <>
+    <VoiceControls />
     <section className="min-h-[320px] flex-1 overflow-y-auto rounded-lg border border-line bg-[#efe5cc] px-6 py-5 text-ink shadow-inner scroll-thin">
       {items.length === 0 && (
         <p className="font-serif text-lg italic text-[#5b4a36]">
@@ -169,18 +262,40 @@ function Narration({ campaignId }: { campaignId: string }) {
       {aiBusy && <p className="animate-pulse font-serif italic text-[#7a6446]">El DM está pensando…</p>}
       <div ref={bottom} />
     </section>
+    </>
   );
 }
 
 function NarrationItem({ event }: { event: GameEvent }) {
   const p = event.payload as Record<string, unknown>;
+  const status = useVoiceStatus();
+  const { voice, speed } = useVoiceStore();
   if (event.type === "narration") {
     const kind = String(p.kind ?? "");
     const speaker = p.speaker ? String(p.speaker) : null;
+    const replay = () => {
+      narrator.stop();
+      narrator.speak(String(p.text ?? ""), {
+        voice: voice || status.data?.default || "",
+        speed,
+        serverAvailable: Boolean(status.data?.available),
+        serverVoices: status.data?.voices ?? [],
+        speaker,
+      });
+    };
     return (
-      <div className={`mb-4 whitespace-pre-line font-serif text-xl leading-relaxed ${kind === "scene" || kind === "intro" ? "read-aloud" : ""} ${kind === "roll_prompt" ? "font-semibold text-[#7a2020]" : ""}`}>
+      <div className={`group relative mb-4 whitespace-pre-line font-serif text-xl leading-relaxed ${kind === "scene" || kind === "intro" ? "read-aloud" : ""} ${kind === "roll_prompt" ? "font-semibold text-[#7a2020]" : ""}`}>
         {speaker && <span className="mr-2 font-display text-sm text-[#7a5a20]">{speaker}:</span>}
         {String(p.text ?? "")}
+        <button
+          type="button"
+          onClick={replay}
+          className="ml-2 align-middle text-sm text-[#7a5a20] opacity-40 hover:opacity-100 group-hover:opacity-80"
+          aria-label="Escuchar"
+          title="Escuchar"
+        >
+          ▶
+        </button>
       </div>
     );
   }

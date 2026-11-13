@@ -53,6 +53,13 @@ class Settings(BaseSettings):
     llm_think: bool = False  # razonamiento ("thinking"): más calidad, más lento
     embedding_model: str = "qwen3-embedding:0.6b"
 
+    # --- Voz del DM (texto a voz). Vacío = sin servidor: la interfaz usa la voz del navegador. ---
+    # Cualquier servidor con la API de OpenAI /v1/audio/speech; con Docker, Kokoro en el servicio «voz».
+    tts_url: str = ""
+    tts_voice: str = "em_alex"  # Kokoro en español: em_alex, em_santa (hombre), ef_dora (mujer)
+    tts_model: str = "kokoro"
+    tts_timeout_seconds: float = 60.0
+
     # Servir la interfaz compilada (frontend/dist) desde el backend.
     static_dir: Path | None = None
 
