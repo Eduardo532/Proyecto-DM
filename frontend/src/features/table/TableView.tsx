@@ -120,7 +120,11 @@ function Narration({ campaignId }: { campaignId: string }) {
   const aiBusy = useTableStore((s) => s.aiBusy);
   const bottom = useRef<HTMLDivElement>(null);
   const items = useMemo(() => (events.data ?? []).filter((e) => e.type === "narration" || e.type === "player_action" || eventSummary(e)), [events.data]);
-  useEffect(() => bottom.current?.scrollIntoView({ behavior: "smooth" }), [items.length, aiBusy]);
+  useEffect(() => {
+    // Llaves obligatorias: en navegadores recientes scrollIntoView devuelve una promesa y React
+    // la tomaría por la función de limpieza del efecto (pantalla en blanco al abrir la campaña).
+    bottom.current?.scrollIntoView({ behavior: "smooth" });
+  }, [items.length, aiBusy]);
 
   return (
     <section className="min-h-[320px] flex-1 overflow-y-auto rounded-lg border border-line bg-[#efe5cc] px-6 py-5 text-ink shadow-inner scroll-thin">
