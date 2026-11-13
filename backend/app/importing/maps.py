@@ -131,13 +131,15 @@ def _phase(profile: NDArray[np.float32], period: float) -> float:
     steps = round(period)
     if steps < 2:
         return 0.0
+    # El desplazamiento se da en (-casilla/2, casilla/2]: una línea en x=63 con casillas de 64 es x=-1.
     count = int(len(profile) / period)
     scores = []
     for offset in range(steps):
         positions = np.round(offset + np.arange(count) * period).astype(int)
         positions = positions[positions < len(profile)]
         scores.append(float(profile[positions].mean()) if len(positions) else 0.0)
-    return float(int(np.argmax(scores)) % steps)
+    offset = float(int(np.argmax(scores)) % steps)
+    return offset - period if offset > period / 2 else offset
 
 
 def _whole(size: int, cell: float) -> bool:
