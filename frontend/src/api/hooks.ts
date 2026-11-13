@@ -18,6 +18,7 @@ import type {
   Quest,
   Roll,
   Scene,
+  Marker,
 } from "./types";
 
 /** Claves de caché: la del DM y la de la mesa se separan para no mezclar datos. */
@@ -53,6 +54,7 @@ export const useEvents = (id: string) => useScoped<GameEvent[]>(id, "events", "/
 export const usePendingRolls = (id: string) => useScoped<Roll[]>(id, "rolls", "/rolls?status=pending");
 export const useScenes = (id: string) => useScoped<Scene[]>(id, "scenes", "/scenes");
 export const useMaps = (id: string) => useScoped<GameMap[]>(id, "maps", "/maps");
+export const useMarkers = (id: string) => useScoped<Marker[]>(id, "markers", "/markers");
 export const useFacts = (id: string) => useScoped<Fact[]>(id, "facts", "/facts");
 export const useNpcs = (id: string) => useScoped<Npc[]>(id, "npcs", "/npcs");
 export const useQuests = (id: string) => useScoped<Quest[]>(id, "quests", "/quests");

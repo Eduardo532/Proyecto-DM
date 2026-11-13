@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api, imageUrl } from "../../api/client";
@@ -6,73 +6,81 @@ import { useCampaignMutation } from "../../api/hooks";
 import type { Asset, Chunk, DocumentInfo, GameMap, KnowledgeLevel } from "../../api/types";
 import { Badge, Button, Empty, ErrorText, Field, Input, Modal, Panel, Select } from "../../components/ui";
 import { KNOWLEDGE_LABELS } from "../../lib/rules";
+import { ImportReview, UploadZone, documentKindLabel } from "./ImportPanel";
 
 const LEVEL_TONE = { public: "moss", conditional: "gold", dm: "blood" } as const;
 
 export function DmDocuments({ campaignId }: { campaignId: string }) {
-  const client = useQueryClient();
   const documents = useQuery({
     queryKey: ["c", campaignId, "dm", "documents"],
     queryFn: () => api<DocumentInfo[]>(`/campaigns/${campaignId}/documents`, { campaignId }),
     refetchInterval: (query) => ((query.state.data ?? []).some((d) => d.status === "processing" || d.status === "pending") ? 2000 : false),
   });
-  const upload = useMutation({
-    mutationFn: (file: File) => {
-      const form = new FormData();
-      form.append("file", file);
-      return api<DocumentInfo>(`/campaigns/${campaignId}/documents`, { method: "POST", form, campaignId });
-    },
-    onSettled: () => client.invalidateQueries({ queryKey: ["c", campaignId] }),
-  });
   const reprocess = useCampaignMutation<string>(campaignId, "POST", (id) => `/documents/${id}/reprocess`);
+  const remove = useCampaignMutation<string>(campaignId, "DELETE", (id) => `/documents/${id}`);
+  const all = documents.data ?? [];
+  const roots = all.filter((d) => !d.parent_id || !all.some((p) => p.id === d.parent_id));
 
   return (
     <div className="flex flex-col gap-4">
-      <Panel title="Aventuras en PDF">
-        <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-line p-6 text-center hover:border-gold">
-          <span className="text-3xl">📜</span>
-          <span>{upload.isPending ? "Subiendo…" : "Haz clic para elegir un PDF (aventura, módulo o suplemento)"}</span>
-          <input
-            type="file"
-            accept="application/pdf"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) upload.mutate(file);
-              e.target.value = "";
-            }}
-          />
-        </label>
-        <ErrorText error={upload.error} />
+      <Panel title="Importar campañas, mapas y personajes">
+        <UploadZone campaignId={campaignId} />
         <ul className="mt-4 flex flex-col gap-3">
-          {documents.data?.map((d) => (
+          {roots.map((d) => (
             <li key={d.id} className="rounded border border-line p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-serif text-lg">{d.title}</span>
-                <span className="flex items-center gap-2 text-sm text-parchment-dim">
-                  {d.page_count} págs. <Badge tone={d.status === "ready" ? "moss" : d.status === "error" ? "blood" : "gold"}>{d.status}</Badge>
-                  <Button onClick={() => reprocess.mutate(d.id)}>Reprocesar</Button>
-                </span>
-              </div>
-              {d.status !== "ready" && (
-                <div className="mt-2 h-2 overflow-hidden rounded bg-ink-3">
-                  <div className="h-full bg-gold transition-all" style={{ width: `${d.progress}%` }} />
-                </div>
-              )}
-              <ul className="mt-2 text-xs text-parchment-dim">
-                {d.log.slice(-4).map((line, i) => (
-                  <li key={i}>{line}</li>
+              <DocumentRow document={d} onReprocess={() => reprocess.mutate(d.id)} onDelete={() => {
+                if (window.confirm(`¿Quitar «${d.title}»? Se borran sus fragmentos e imágenes (los personajes ya creados se mantienen).`)) remove.mutate(d.id);
+              }} />
+              <ImportReview campaignId={campaignId} document={d} />
+              {all
+                .filter((child) => child.parent_id === d.id)
+                .map((child) => (
+                  <div key={child.id} className="mt-2 border-l-2 border-gold/40 pl-3">
+                    <DocumentRow document={child} onReprocess={() => reprocess.mutate(child.id)} />
+                  </div>
                 ))}
-              </ul>
             </li>
           ))}
         </ul>
       </Panel>
-      <ChunkReview campaignId={campaignId} documents={documents.data ?? []} />
+      <ChunkReview campaignId={campaignId} documents={all.filter((d) => d.kind === "pdf")} />
       <AssetGallery campaignId={campaignId} />
     </div>
   );
 }
+
+function DocumentRow({ document: d, onReprocess, onDelete }: { document: DocumentInfo; onReprocess: () => void; onDelete?: () => void }) {
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-serif text-lg">{d.title}</span>
+        <span className="flex items-center gap-2 text-sm text-parchment-dim">
+          <Badge>{documentKindLabel(d)}</Badge>
+          {d.page_count > 0 && `${d.page_count} págs.`}
+          <Badge tone={d.status === "ready" ? "moss" : d.status === "error" ? "blood" : "gold"}>{STATUS[d.status]}</Badge>
+          <Button onClick={onReprocess}>Reprocesar</Button>
+          {onDelete && (
+            <Button variant="ghost" onClick={onDelete}>
+              Quitar
+            </Button>
+          )}
+        </span>
+      </div>
+      {d.status !== "ready" && (
+        <div className="mt-2 h-2 overflow-hidden rounded bg-ink-3">
+          <div className="h-full bg-gold transition-all" style={{ width: `${d.progress}%` }} />
+        </div>
+      )}
+      <ul className="mt-2 text-xs text-parchment-dim">
+        {d.log.slice(-3).map((line, i) => (
+          <li key={i}>{line}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+const STATUS: Record<DocumentInfo["status"], string> = { pending: "en cola", processing: "procesando", ready: "listo", error: "error" };
 
 function ChunkReview({ campaignId, documents }: { campaignId: string; documents: DocumentInfo[] }) {
   const [level, setLevel] = useState("");
@@ -129,28 +137,65 @@ function ChunkReview({ campaignId, documents }: { campaignId: string; documents:
   );
 }
 
+const ASSET_KINDS: Record<string, string> = {
+  map: "Mapa",
+  illustration: "Ilustración",
+  handout: "Ilustración / handout",
+  token: "Token",
+  marker: "Marcador",
+  unknown: "Sin clasificar",
+};
+
 function AssetGallery({ campaignId }: { campaignId: string }) {
+  const [kind, setKind] = useState("");
   const assets = useQuery({
     queryKey: ["c", campaignId, "dm", "assets"],
     queryFn: () => api<Asset[]>(`/campaigns/${campaignId}/assets`, { campaignId }),
   });
   const update = useCampaignMutation<{ id: string; kind?: string; knowledge_level?: string }>(campaignId, "PATCH", (b) => `/assets/${b.id}`);
   const [creating, setCreating] = useState<Asset | null>(null);
+  const shown = (assets.data ?? []).filter((a) => !kind || a.kind === kind);
   return (
-    <Panel title="Imágenes y mapas extraídos">
-      {assets.data?.length === 0 && <Empty>No se encontraron imágenes.</Empty>}
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {assets.data?.map((a) => (
+    <Panel title="Imágenes, mapas, tokens y marcadores">
+      <div className="mb-3 flex flex-wrap gap-2">
+        <Select value={kind} onChange={(e) => setKind(e.target.value)} className="w-56">
+          <option value="">Todo ({assets.data?.length ?? 0})</option>
+          {Object.entries(ASSET_KINDS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label} ({(assets.data ?? []).filter((a) => a.kind === value).length})
+            </option>
+          ))}
+        </Select>
+      </div>
+      {shown.length === 0 && <Empty>No hay imágenes.</Empty>}
+      <ul className="grid max-h-[70vh] gap-3 overflow-auto scroll-thin sm:grid-cols-2 lg:grid-cols-4">
+        {shown.map((a) => (
           <li key={a.id} className="rounded border border-line p-2">
-            <img src={imageUrl(campaignId, `/assets/${a.id}/image`)} alt={`Página ${a.page}`} className="h-40 w-full rounded object-contain" loading="lazy" />
-            <div className="mt-2 flex flex-wrap items-center gap-1 text-xs">
-              <span>p. {a.page}</span>
-              <Badge tone={a.kind === "map" ? "gold" : "default"}>{a.kind === "map" ? "mapa" : a.kind}</Badge>
+            <img
+              src={imageUrl(campaignId, `/assets/${a.id}/image`)}
+              alt={a.caption || `Página ${a.page}`}
+              className={`w-full rounded object-contain ${a.kind === "marker" || a.kind === "token" ? "h-20" : "h-40"}`}
+              loading="lazy"
+            />
+            <div className="mt-1 truncate text-sm" title={a.original_name || a.caption}>
+              {a.caption || (a.page ? `Página ${a.page}` : "Imagen")}
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1 text-xs">
+              {a.page > 0 && <span>p. {a.page}</span>}
+              <Badge tone={a.kind === "map" ? "gold" : "default"}>{ASSET_KINDS[a.kind] ?? a.kind}</Badge>
+              {a.variant && a.variant !== "default" && <Badge>{a.variant}</Badge>}
+              {typeof a.meta.condition === "string" && <Badge tone="arcane">{a.meta.condition}</Badge>}
               <Badge tone={LEVEL_TONE[a.knowledge_level]}>{KNOWLEDGE_LABELS[a.knowledge_level]}</Badge>
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
-              <Button onClick={() => setCreating(a)}>Crear mapa</Button>
-              <Button onClick={() => update.mutate({ id: a.id, kind: a.kind === "map" ? "illustration" : "map" })}>{a.kind === "map" ? "No es mapa" : "Es mapa"}</Button>
+              {(a.kind === "map" || a.kind === "illustration" || a.kind === "handout") && <Button onClick={() => setCreating(a)}>Crear mapa</Button>}
+              <Select value={a.kind} onChange={(e) => update.mutate({ id: a.id, kind: e.target.value })} className="w-36" aria-label="Tipo de imagen">
+                {Object.entries(ASSET_KINDS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
               <Button onClick={() => update.mutate({ id: a.id, knowledge_level: a.knowledge_level === "public" ? "dm" : "public" })}>
                 {a.knowledge_level === "public" ? "Ocultar" : "Mostrar a la mesa"}
               </Button>
@@ -165,7 +210,7 @@ function AssetGallery({ campaignId }: { campaignId: string }) {
 
 function CreateMapFromAsset({ campaignId, asset, onClose }: { campaignId: string; asset: Asset; onClose: () => void }) {
   const [cellPx, setCellPx] = useState(50);
-  const [name, setName] = useState(`Mapa p. ${asset.page}`);
+  const [name, setName] = useState(asset.caption || `Mapa p. ${asset.page}`);
   const create = useCampaignMutation<Record<string, unknown>, GameMap>(campaignId, "POST", "/maps");
   const calibrate = useCampaignMutation<{ id: string; cell_size_px: number }>(campaignId, "PATCH", (b) => `/maps/${b.id}`);
   const width = Math.max(1, Math.min(200, Math.round(asset.width / cellPx)));

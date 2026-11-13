@@ -187,8 +187,10 @@ export interface GameMap {
   grid_offset_x: number;
   grid_offset_y: number;
   cell_size_px: number;
+  cell_height_px: number | null;
   ambient_light: string;
   has_background: boolean;
+  has_dm_background: boolean;
   fog_enabled: boolean;
   logic: MapLogic;
   explored: [number, number][];
@@ -256,6 +258,56 @@ export interface DocumentInfo {
   progress: number;
   log: string[];
   created_at: string;
+  kind: "pdf" | "sheet" | "archive" | "image" | "map_pdf";
+  parent_id: string | null;
+  manifest: ImportItem[];
+}
+
+export type ImportKind = "adventure" | "character" | "map" | "handout" | "token" | "marker" | "archive" | "ignored";
+
+export interface ImportItem {
+  path: string;
+  kind: ImportKind;
+  name: string;
+  reason: string;
+  status: "pending" | "done" | "draft" | "ignored" | "error";
+  variant: string;
+  group_key: string;
+  meta: Record<string, unknown>;
+  warnings: string[];
+  ref_type?: "document" | "asset" | "character" | "map";
+  ref_id?: string;
+  map_id?: string;
+  draft?: CharacterDraft;
+}
+
+export interface CharacterDraft {
+  name: string;
+  race: string;
+  char_class: string;
+  subclass: string;
+  level: number;
+  background: string;
+  hp_max: number;
+  armor_class: number;
+  speed_ft: number;
+  notes: string;
+  sheet: {
+    abilities: Record<string, number>;
+    skill_proficiencies: string[];
+    skill_expertise: string[];
+    save_proficiencies: string[];
+    attacks: { name: string }[];
+    spells: { name: string; level: number }[];
+    features: { name: string }[];
+    languages: string[];
+  };
+}
+
+export interface Marker {
+  asset_id: string;
+  label: string;
+  condition: string | null;
 }
 
 export interface Chunk {
@@ -282,6 +334,10 @@ export interface Asset {
   kind: string;
   knowledge_level: KnowledgeLevel;
   caption: string;
+  original_name: string;
+  variant: string;
+  group_key: string;
+  meta: Record<string, unknown>;
 }
 
 export interface Npc {

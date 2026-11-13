@@ -58,7 +58,7 @@ export function DmMaps({ campaignId }: { campaignId: string }) {
     <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
       <div className="flex flex-col gap-4">
         <Panel title="Mapas">
-          {maps.data?.length === 0 && <Empty>Crea un mapa en blanco o desde una imagen del PDF (Documentos).</Empty>}
+          {maps.data?.length === 0 && <Empty>Importa mapas (imágenes, PDF o ZIP) en «Importar», o crea uno en blanco.</Empty>}
           <ul className="flex flex-col gap-1">
             {maps.data?.map((m) => (
               <li key={m.id}>
@@ -101,6 +101,7 @@ function MapEditor({ campaignId, map }: { campaignId: string; map: GameMap }) {
     width_cells: map.width_cells,
     height_cells: map.height_cells,
     cell_size_px: map.cell_size_px,
+    cell_height_px: map.cell_height_px,
     grid_offset_x: map.grid_offset_x,
     grid_offset_y: map.grid_offset_y,
     ambient_light: map.ambient_light,
@@ -108,6 +109,8 @@ function MapEditor({ campaignId, map }: { campaignId: string; map: GameMap }) {
   });
   const save = useCampaignMutation<Record<string, unknown>>(campaignId, "PATCH", `/maps/${map.id}`);
   const remove = useCampaignMutation<null>(campaignId, "DELETE", `/maps/${map.id}`);
+  const detect = useCampaignMutation<null, GameMap & { grid_confidence: number }>(campaignId, "POST", `/maps/${map.id}/detect-grid`);
+  const [dmVersion, setDmVersion] = useState(map.has_dm_background);
   useEffect(() => setLogic(normalize(map.logic)), [map.logic]);
   const preview: GameMap = { ...map, ...calibration, logic };
 
@@ -131,7 +134,7 @@ function MapEditor({ campaignId, map }: { campaignId: string; map: GameMap }) {
       <MapCanvas
         map={preview}
         entities={entities.data ?? []}
-        backgroundUrl={map.has_background ? imageUrl(campaignId, `/maps/${map.id}/image`) : null}
+        backgroundUrl={map.has_background ? imageUrl(campaignId, `/maps/${map.id}/image${dmVersion && map.has_dm_background ? "?variant=dm" : ""}`) : null}
         dm
         onCellClick={(x, y) => {
           setLogic((current) => applyTool(current, tool, x, y));
@@ -139,7 +142,18 @@ function MapEditor({ campaignId, map }: { campaignId: string; map: GameMap }) {
         }}
         height={700}
       />
-      <ErrorText error={save.error ?? remove.error} />
+      {map.has_dm_background && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-parchment-dim">Imagen:</span>
+          <Button variant={dmVersion ? "primary" : "ghost"} onClick={() => setDmVersion(true)}>
+            Versión DM
+          </Button>
+          <Button variant={dmVersion ? "ghost" : "primary"} onClick={() => setDmVersion(false)}>
+            Lo que ve la mesa
+          </Button>
+        </div>
+      )}
+      <ErrorText error={save.error ?? remove.error ?? detect.error} />
       <Panel title="Calibración y opciones">
         <div className="grid gap-3 sm:grid-cols-4">
           <Field label="Columnas">
@@ -148,9 +162,14 @@ function MapEditor({ campaignId, map }: { campaignId: string; map: GameMap }) {
           <Field label="Filas">
             <Input type="number" min={1} max={200} value={calibration.height_cells} onChange={(e) => setCalibration({ ...calibration, height_cells: Number(e.target.value) })} />
           </Field>
-          <Field label="Casilla (px de la imagen)">
+          <Field label={calibration.cell_height_px ? "Ancho de casilla (px)" : "Casilla (px de la imagen)"}>
             <Input type="number" step={0.5} min={3} value={calibration.cell_size_px} onChange={(e) => setCalibration({ ...calibration, cell_size_px: Number(e.target.value) })} />
           </Field>
+          {calibration.cell_height_px !== null && (
+            <Field label="Alto de casilla (px)">
+              <Input type="number" step={0.5} min={3} value={calibration.cell_height_px} onChange={(e) => setCalibration({ ...calibration, cell_height_px: Number(e.target.value) })} />
+            </Field>
+          )}
           <Field label="Luz ambiental">
             <Select value={calibration.ambient_light} onChange={(e) => setCalibration({ ...calibration, ambient_light: e.target.value })}>
               <option value="bright">Brillante</option>
@@ -168,6 +187,37 @@ function MapEditor({ campaignId, map }: { campaignId: string; map: GameMap }) {
             <input type="checkbox" checked={calibration.fog_enabled} onChange={(e) => setCalibration({ ...calibration, fog_enabled: e.target.checked })} />
             Niebla de guerra
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={calibration.cell_height_px !== null}
+              onChange={(e) => setCalibration({ ...calibration, cell_height_px: e.target.checked ? calibration.cell_size_px : null })}
+            />
+            Casillas rectangulares
+          </label>
+          {map.has_background && (
+            <div className="flex items-end">
+              <Button
+                disabled={detect.isPending}
+                onClick={() =>
+                  detect.mutate(null, {
+                    onSuccess: (m) =>
+                      setCalibration({
+                        ...calibration,
+                        width_cells: m.width_cells,
+                        height_cells: m.height_cells,
+                        cell_size_px: m.cell_size_px,
+                        cell_height_px: m.cell_height_px,
+                        grid_offset_x: m.grid_offset_x,
+                        grid_offset_y: m.grid_offset_y,
+                      }),
+                  })
+                }
+              >
+                {detect.isPending ? "Midiendo…" : "Detectar cuadrícula"}
+              </Button>
+            </div>
+          )}
           <div className="flex items-end gap-2">
             <Button onClick={() => save.mutate({ reset_fog: true })}>Reiniciar niebla</Button>
             <Button variant="danger" onClick={() => window.confirm("¿Borrar el mapa?") && remove.mutate(null)}>

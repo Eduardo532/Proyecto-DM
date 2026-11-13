@@ -1,4 +1,4 @@
-"""Documentos PDF: subida, procesamiento, revisión de la clasificación, imágenes y búsqueda."""
+"""Importación de archivos (PDF, imágenes y ZIP), revisión de lo detectado, imágenes y búsqueda."""
 
 from __future__ import annotations
 
@@ -15,11 +15,14 @@ from app.ai.runtime import runtime
 from app.api.deps import CampaignDep, Db, DmCampaign, IsDm, commit
 from app.document_processing.pipeline import document_summary, process_document, register_upload
 from app.document_processing.search import search
+from app.importing.detect import IMAGE_EXTENSIONS
+from app.importing.service import process_import
 from app.models import Document, DocumentAsset, DocumentChunk
 from app.services.errors import Forbidden, NotFound
 
 router = APIRouter(tags=["documentos"])
-MAX_UPLOAD_BYTES = 300 * 1024 * 1024
+MAX_UPLOAD_BYTES = 1024 * 1024 * 1024
+SUPPORTED_SUFFIXES = {".pdf", ".zip"} | IMAGE_EXTENSIONS
 
 
 class ChunkUpdate(BaseModel):
@@ -28,7 +31,7 @@ class ChunkUpdate(BaseModel):
 
 
 class AssetUpdate(BaseModel):
-    kind: Literal["map", "illustration", "handout", "unknown"] | None = None
+    kind: Literal["map", "illustration", "handout", "token", "marker", "unknown"] | None = None
     knowledge_level: Literal["public", "conditional", "dm"] | None = None
     caption: str | None = None
 
@@ -41,30 +44,34 @@ def _run_processing(document_id: str) -> None:
         if document is None:
             return
         try:
-            process_document(db, document, runtime.settings.data_dir, runtime.provider)
+            if document.parent_id:  # PDF que salió de un ZIP: ya se sabe que es una aventura
+                process_document(db, document, runtime.settings.data_dir, runtime.provider)
+            else:
+                process_import(db, document, runtime.settings.data_dir, runtime.provider)
         except Exception:
             return  # el error queda en document.log
 
 
 @router.post("/campaigns/{campaign_id}/documents", response_model=dict[str, Any], status_code=202)
 async def upload(campaign: DmCampaign, file: UploadFile, db: Db, request: Request) -> dict[str, Any]:
-    if not (file.filename or "").lower().endswith(".pdf"):
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in SUPPORTED_SUFFIXES:
         from app.engines.errors import RuleViolation
 
-        raise RuleViolation("Solo se admiten archivos PDF.")
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        raise RuleViolation("Formato no admitido. Sube un PDF (aventura, ficha o mapa), una imagen o un ZIP.")
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         size = 0
         while chunk := await file.read(1024 * 1024):
             size += len(chunk)
             if size > MAX_UPLOAD_BYTES:
                 from app.engines.errors import RuleViolation
 
-                raise RuleViolation("El PDF supera el tamaño máximo (300 MB).")
+                raise RuleViolation("El archivo supera el tamaño máximo (1 GB).")
             tmp.write(chunk)
         temp_path = Path(tmp.name)
     try:
         settings = request.app.state.settings
-        document = register_upload(db, campaign, settings.data_dir, file.filename or "documento.pdf", temp_path)
+        document = register_upload(db, campaign, settings.data_dir, file.filename or f"archivo{suffix}", temp_path)
         commit(db)
     finally:
         temp_path.unlink(missing_ok=True)
@@ -142,9 +149,14 @@ def list_assets(campaign: CampaignDep, db: Db, dm: IsDm, kind: str | None = None
         query = query.where(DocumentAsset.kind == kind)
     if not dm:
         query = query.where(DocumentAsset.knowledge_level == "public")
-    return [{"id": a.id, "document_id": a.document_id, "page": a.page, "width": a.width, "height": a.height,
-             "kind": a.kind, "knowledge_level": a.knowledge_level, "caption": a.caption}
-            for a in db.scalars(query.order_by(DocumentAsset.page))]
+    return [asset_out(a) for a in db.scalars(query.order_by(DocumentAsset.page, DocumentAsset.caption))]
+
+
+def asset_out(asset: DocumentAsset) -> dict[str, Any]:
+    return {"id": asset.id, "document_id": asset.document_id, "page": asset.page, "width": asset.width,
+            "height": asset.height, "kind": asset.kind, "knowledge_level": asset.knowledge_level,
+            "caption": asset.caption, "original_name": asset.original_name, "variant": asset.variant,
+            "group_key": asset.group_key, "meta": asset.meta or {}}
 
 
 @router.patch("/campaigns/{campaign_id}/assets/{asset_id}", response_model=dict[str, Any])
@@ -183,3 +195,62 @@ def search_campaign(campaign: CampaignDep, db: Db, dm: IsDm, q: str, limit: int 
 @router.get("/ai/status", response_model=dict[str, Any])
 def ai_status() -> dict[str, Any]:
     return runtime.provider.status()
+
+
+# ------------------------------------------------------- revisión de importaciones ---
+class ConfirmCharacter(BaseModel):
+    player_id: str | None = None
+    # Correcciones del DM sobre el borrador (mismos campos que al crear un personaje).
+    overrides: dict[str, Any] = {}
+
+
+def _manifest_item(db: Db, campaign_id: str, document_id: str, index: int) -> tuple[Document, dict[str, Any]]:
+    document = db.get(Document, document_id)
+    if document is None or document.campaign_id != campaign_id:
+        raise NotFound("El documento no existe.")
+    if not 0 <= index < len(document.manifest):
+        raise NotFound("El elemento no existe.")
+    return document, dict(document.manifest[index])
+
+
+@router.post("/campaigns/{campaign_id}/documents/{document_id}/items/{index}/confirm", response_model=dict[str, Any])
+def confirm_character(campaign: DmCampaign, document_id: str, index: int, body: ConfirmCharacter,
+                      db: Db) -> dict[str, Any]:
+    """Crea el personaje a partir del borrador leído de la ficha."""
+    from app.api.characters import create_character
+    from app.engines.errors import RuleViolation
+    from app.schemas.character import CharacterCreate
+
+    document, item = _manifest_item(db, campaign.id, document_id, index)
+    if item.get("kind") != "character" or not item.get("draft"):
+        raise RuleViolation("Este elemento no es una ficha de personaje.")
+    if item.get("status") == "done":
+        raise RuleViolation("Este personaje ya se creó.")
+    data = {**item["draft"], **body.overrides, "player_id": body.player_id}
+    character = create_character(campaign, CharacterCreate.model_validate(data), db)
+    item.update(status="done", ref_type="character", ref_id=character.id)
+    manifest = list(document.manifest)
+    manifest[index] = item
+    document.manifest = manifest
+    commit(db)
+    return document_summary(document)
+
+
+@router.post("/campaigns/{campaign_id}/documents/{document_id}/items/{index}/dismiss", response_model=dict[str, Any])
+def dismiss_item(campaign: DmCampaign, document_id: str, index: int, db: Db) -> dict[str, Any]:
+    document, item = _manifest_item(db, campaign.id, document_id, index)
+    item["status"] = "ignored"
+    manifest = list(document.manifest)
+    manifest[index] = item
+    document.manifest = manifest
+    commit(db)
+    return document_summary(document)
+
+
+@router.get("/campaigns/{campaign_id}/markers", response_model=list[dict[str, Any]])
+def list_markers(campaign: CampaignDep, db: Db) -> list[dict[str, Any]]:
+    """Iconos de estado importados (por ejemplo, un set de marcadores de Roll20) para dibujarlos en los tokens."""
+    rows = db.scalars(select(DocumentAsset).where(DocumentAsset.campaign_id == campaign.id,
+                                                  DocumentAsset.kind == "marker").order_by(DocumentAsset.caption))
+    return [{"asset_id": a.id, "label": (a.meta or {}).get("label") or a.caption,
+             "condition": (a.meta or {}).get("condition")} for a in rows]

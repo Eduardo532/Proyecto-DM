@@ -58,5 +58,6 @@ export async function api<T>(
 
 export function imageUrl(campaignId: string, path: string): string {
   const token = useDmStore.getState().tokens[campaignId];
-  return `/api/campaigns/${campaignId}${path}${token ? `?dm_token=${encodeURIComponent(token)}` : ""}`;
+  const separator = path.includes("?") ? "&" : "?";
+  return `/api/campaigns/${campaignId}${path}${token ? `${separator}dm_token=${encodeURIComponent(token)}` : ""}`;
 }

@@ -17,6 +17,7 @@ from app.document_processing.chunking import build_pieces
 from app.document_processing.classify import classify, discoveries
 from app.document_processing.extract import extract
 from app.engines.rules.abilities import SKILLS
+from app.importing.maps import clean_stem
 from app.models import Campaign, Document, DocumentAsset, DocumentChunk, Fact, Scene
 from app.services.events import append_event
 
@@ -29,17 +30,20 @@ def campaign_dir(data_dir: Path, campaign_id: str) -> Path:
 
 
 def register_upload(db: Session, campaign: Campaign, data_dir: Path, filename: str, source: Path,
-                    title: str | None = None) -> Document:
+                    title: str | None = None, parent_id: str | None = None) -> Document:
     digest = hashlib.sha256(source.read_bytes()).hexdigest()
     existing = db.scalar(select(Document).where(Document.campaign_id == campaign.id, Document.sha256 == digest))
     if existing:
         return existing
     target_dir = campaign_dir(data_dir, campaign.id) / "documents"
     target_dir.mkdir(parents=True, exist_ok=True)
-    target = target_dir / f"{digest[:16]}.pdf"
+    suffix = Path(filename).suffix.lower() or ".pdf"
+    target = target_dir / f"{digest[:16]}{suffix}"
     shutil.copyfile(source, target)
-    document = Document(campaign_id=campaign.id, title=title or Path(filename).stem, filename=filename,
-                        file_path=str(target), sha256=digest, status="pending", log=[])
+    kind = {".pdf": "pdf", ".zip": "archive"}.get(suffix, "image")
+    document = Document(campaign_id=campaign.id, title=title or clean_stem(filename), filename=filename,
+                        file_path=str(target), sha256=digest, status="pending", log=[], kind=kind, manifest=[],
+                        parent_id=parent_id)
     db.add(document)
     db.flush()
     append_event(db, campaign.id, "document_uploaded", {"document_id": document.id, "title": document.title},
@@ -177,5 +181,8 @@ def document_summary(document: Document) -> dict[str, Any]:
         "status": document.status,
         "progress": document.progress,
         "log": document.log,
+        "kind": document.kind,
+        "parent_id": document.parent_id,
+        "manifest": document.manifest,
         "created_at": document.created_at.isoformat(),
     }
