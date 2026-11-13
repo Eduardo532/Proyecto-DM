@@ -138,8 +138,8 @@ def _phase(profile: NDArray[np.float32], period: float) -> float:
         positions = np.round(offset + np.arange(count) * period).astype(int)
         positions = positions[positions < len(profile)]
         scores.append(float(profile[positions].mean()) if len(positions) else 0.0)
-    offset = float(int(np.argmax(scores)) % steps)
-    return offset - period if offset > period / 2 else offset
+    best = float(int(np.argmax(scores)) % steps)
+    return best - period if best > period / 2 else best
 
 
 def _whole(size: int, cell: float) -> bool:
