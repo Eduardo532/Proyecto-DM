@@ -24,6 +24,7 @@ export function TableView({ campaignId }: { campaignId: string }) {
     <div className="grid h-full gap-4 pt-1 lg:grid-cols-[260px_minmax(0,1fr)_300px]">
       <PartyPanel campaignId={campaignId} />
       <div className="flex min-h-0 flex-col gap-3">
+        <StartAdventure campaignId={campaignId} />
         <Narration campaignId={campaignId} />
         <PendingRolls campaignId={campaignId} />
         <ActionBar campaignId={campaignId} />
@@ -115,6 +116,35 @@ function CharacterLine({ character, selected, onSelect }: { character: Character
   );
 }
 
+/** Botón para empezar: el DM presenta la historia y la primera escena. Desaparece cuando ya empezó. */
+function StartAdventure({ campaignId }: { campaignId: string }) {
+  const events = useEvents(campaignId);
+  const aiBusy = useTableStore((s) => s.aiBusy);
+  const client = useQueryClient();
+  const start = useMutation({
+    mutationFn: () => api(`/campaigns/${campaignId}/start`, { method: "POST", campaignId }),
+    onSettled: () => client.invalidateQueries({ queryKey: ["c", campaignId] }),
+  });
+  const started = (events.data ?? []).some(
+    (e) => e.type === "campaign_started" || (e.type === "narration" && ["intro", "scene", "recap"].includes(String((e.payload as Record<string, unknown>).kind))),
+  );
+  if (!events.data || started) return null;
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-lg border-2 border-gold bg-ink-2 p-6 text-center">
+      <span className="text-4xl">📖</span>
+      <h2 className="font-display text-2xl text-gold">¿Empezamos la aventura?</h2>
+      <p className="max-w-xl font-serif text-parchment-dim">
+        El DM presentará la historia, os situará en la primera escena y os preguntará qué hacéis. Después cada jugador puede actuar o simplemente hablar: con los
+        personajes del mundo, con el grupo o con el propio DM.
+      </p>
+      <Button variant="primary" className="px-6 py-3 text-lg" onClick={() => start.mutate()} disabled={start.isPending || aiBusy}>
+        {start.isPending || aiBusy ? "El DM está preparando la historia…" : "Comenzar la aventura"}
+      </Button>
+      <ErrorText error={start.error} />
+    </div>
+  );
+}
+
 function Narration({ campaignId }: { campaignId: string }) {
   const events = useEvents(campaignId);
   const aiBusy = useTableStore((s) => s.aiBusy);
@@ -130,7 +160,7 @@ function Narration({ campaignId }: { campaignId: string }) {
     <section className="min-h-[320px] flex-1 overflow-y-auto rounded-lg border border-line bg-[#efe5cc] px-6 py-5 text-ink shadow-inner scroll-thin">
       {items.length === 0 && (
         <p className="font-serif text-lg italic text-[#5b4a36]">
-          Inicia una sesión y elige una escena en el Panel DM (o pide al DM virtual que empiece). Después, cada jugador escribe lo que hace su personaje.
+          Pulsa «Comenzar la aventura» para que el DM presente la historia. Después, cada jugador escribe lo que hace o dice su personaje.
         </p>
       )}
       {items.map((event) => (
@@ -148,13 +178,20 @@ function NarrationItem({ event }: { event: GameEvent }) {
     const kind = String(p.kind ?? "");
     const speaker = p.speaker ? String(p.speaker) : null;
     return (
-      <div className={`mb-4 font-serif text-xl leading-relaxed ${kind === "scene" ? "read-aloud" : ""} ${kind === "roll_prompt" ? "font-semibold text-[#7a2020]" : ""}`}>
+      <div className={`mb-4 whitespace-pre-line font-serif text-xl leading-relaxed ${kind === "scene" || kind === "intro" ? "read-aloud" : ""} ${kind === "roll_prompt" ? "font-semibold text-[#7a2020]" : ""}`}>
         {speaker && <span className="mr-2 font-display text-sm text-[#7a5a20]">{speaker}:</span>}
         {String(p.text ?? "")}
       </div>
     );
   }
   if (event.type === "player_action") {
+    if (p.mode === "talk") {
+      return (
+        <p className="mb-3 border-l-4 border-[#5a7a9a] pl-3 font-serif text-lg text-[#2f3f52]">
+          <strong>{String(p.name)}</strong> dice: «{String(p.text)}»
+        </p>
+      );
+    }
     return (
       <p className="mb-3 border-l-4 border-[#b8913a] pl-3 font-serif text-lg italic text-[#4a3b28]">
         <strong className="not-italic">{String(p.name)}</strong>: {String(p.text)}
@@ -245,6 +282,7 @@ function ActionBar({ campaignId }: { campaignId: string }) {
   const players = usePlayers(campaignId);
   const { activeCharacterId, setActiveCharacter } = useTableStore();
   const [text, setText] = useState("");
+  const [mode, setMode] = useState<"action" | "talk">("action");
   const [dice, setDice] = useState("");
   const client = useQueryClient();
   const living = (characters.data ?? []).filter((c) => c.status === "active");
@@ -253,7 +291,7 @@ function ActionBar({ campaignId }: { campaignId: string }) {
     mutationFn: () =>
       api(`/campaigns/${campaignId}/actions`, {
         method: "POST",
-        body: { character_id: acting?.id, player_id: acting?.player_id ?? null, text },
+        body: { character_id: acting?.id, player_id: acting?.player_id ?? null, text, mode },
         campaignId,
       }),
     onSuccess: () => setText(""),
@@ -270,6 +308,17 @@ function ActionBar({ campaignId }: { campaignId: string }) {
 
   return (
     <div className="rounded-lg border border-line bg-ink-2 p-3">
+      <div className="mb-2 flex gap-1" role="group" aria-label="Tipo de intervención">
+        <Button type="button" variant={mode === "action" ? "primary" : "ghost"} onClick={() => setMode("action")} aria-pressed={mode === "action"}>
+          🗡️ Hacer algo
+        </Button>
+        <Button type="button" variant={mode === "talk" ? "primary" : "ghost"} onClick={() => setMode("talk")} aria-pressed={mode === "talk"}>
+          💬 Hablar
+        </Button>
+        <span className="self-center text-xs text-parchment-dim">
+          {mode === "action" ? "El DM decide si hace falta una tirada." : "Habla con un personaje del mundo, con el grupo o pregunta al DM. Sin tiradas."}
+        </span>
+      </div>
       <form
         className="flex flex-wrap items-center gap-2"
         onSubmit={(e) => {
@@ -292,14 +341,18 @@ function ActionBar({ campaignId }: { campaignId: string }) {
         <input
           className="min-w-[240px] flex-1 rounded-md border border-line bg-ink px-3 py-2 font-serif text-lg text-parchment focus:border-gold focus:outline-none"
           placeholder={
-            !session.data ? "Inicia una sesión para jugar" : blocked ? "Resuelve la tirada pendiente…" : `¿Qué hace ${acting?.name ?? "tu personaje"}${playerName ? ` (${playerName})` : ""}?`
+            !session.data
+              ? "Pulsa «Comenzar la aventura» para jugar"
+              : blocked
+                ? "Resuelve la tirada pendiente…"
+                : `¿Qué ${mode === "talk" ? "dice" : "hace"} ${acting?.name ?? "tu personaje"}${playerName ? ` (${playerName})` : ""}?`
           }
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={blocked || !acting}
         />
         <Button variant="primary" disabled={blocked || !text.trim() || send.isPending || !acting}>
-          Actuar
+          {mode === "talk" ? "Decir" : "Actuar"}
         </Button>
       </form>
       <form

@@ -143,6 +143,9 @@ def run_turn(db: Session, session_id: str, event_id: str) -> None:
     ctx = _load(db, session_id, payload.get("character_id"))
     if ctx is None or ctx.character is None:
         return
+    if payload.get("mode") == "talk":
+        _talk(db, ctx, str(payload.get("text", "")))
+        return
     action = f"{ctx.character.name} intenta: {payload.get('text', '')}"
     if payload.get("target"):
         action += f" (elemento seleccionado: {payload['target']})"
@@ -233,6 +236,33 @@ def _dialogue(db: Session, ctx: ctxmod.TurnContext, action: str, npc_id: str | N
     db.add(MemoryEntry(campaign_id=npc.campaign_id, scope="npc", scope_id=npc.id, importance=2,
                        content=f"Habló con {ctx.character.name}: «{str(action)[:200]}»", visibility="dm"))
     npc.known_to_party = True
+
+
+def _talk(db: Session, ctx: ctxmod.TurnContext, said: str) -> None:
+    """Conversación libre: hablar con un PNJ, con el grupo o preguntar al DM. Nunca pide tiradas."""
+    assert ctx.character is not None
+    personas = []
+    for npc in ctx.npcs:
+        personas.append(f"- {npc.name}: {npc.public_description}. Personalidad: {npc.personality}. "
+                        f"Habla así: {npc.voice}. Actitud: {npc.attitude}. Solo sabe lo que se indica aquí.")
+    present = ("PNJ presentes:\n" + "\n".join(personas)) if personas else "No hay PNJ presentes."
+    instruction = (
+        f"{ctx.character.name} dice: «{said}»\n{present}\n"
+        "Responde como Dungeon Master, en 1-4 frases:\n"
+        "- Si se dirige a un PNJ presente, contesta ese PNJ en estilo directo, empezando por su nombre y dos puntos.\n"
+        "- Si es una pregunta al DM (reglas, qué ve o qué sabe su personaje), contesta con lo que su personaje "
+        "percibe o sabría, sin revelar secretos.\n"
+        "- Si habla con otros personajes, no hables por ellos: como mucho añade un detalle del ambiente.\n"
+        "No pidas tiradas ni decidas acciones de los personajes."
+    )
+    text = _narrate(db, ctx, instruction, said)
+    _publish_narration(db, ctx.session, text, "dialogue", character_id=ctx.character.id)
+    lowered = said.lower()
+    for npc in ctx.npcs:
+        if npc.name.lower().split(" ")[0] in lowered:
+            db.add(MemoryEntry(campaign_id=npc.campaign_id, scope="npc", scope_id=npc.id, importance=2,
+                               content=f"{ctx.character.name} le dijo: «{said[:200]}»", visibility="dm"))
+            npc.known_to_party = True
 
 
 def _start_combat(db: Session, ctx: ctxmod.TurnContext, action: str) -> None:

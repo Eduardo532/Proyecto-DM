@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.api.characters import get_character
@@ -56,6 +57,35 @@ def start_session(campaign: CampaignDep, db: Db) -> GameSession:
 
         schedule_resume(campaign.id, session.id)
     return session
+
+
+@router.post("/campaigns/{campaign_id}/start", response_model=SessionOut, status_code=202)
+def start_campaign(campaign: CampaignDep, db: Db) -> GameSession:
+    """Comenzar la aventura: abre la sesión si hace falta y el DM presenta la historia y la primera escena."""
+    session = session_service.start_session(db, campaign)
+    commit(db)
+    from app.ai.intro import schedule_intro
+
+    schedule_intro(campaign.id, session.id)
+    db.refresh(session)
+    return session
+
+
+class PresentationOut(BaseModel):
+    text: str
+
+
+@router.post("/campaigns/{campaign_id}/presentation/suggest", response_model=PresentationOut)
+def suggest_presentation(campaign: DmCampaign, db: Db) -> PresentationOut:
+    """Propuesta de presentación a partir de la aventura importada (solo DM; se revisa antes de guardar)."""
+    from app.ai.intro import suggest_presentation as suggest
+    from app.ai.providers import LLMUnavailable
+    from app.engines.errors import RuleViolation
+
+    try:
+        return PresentationOut(text=suggest(db, campaign))
+    except LLMUnavailable as exc:
+        raise RuleViolation(f"No se pudo generar la propuesta: {exc}") from exc
 
 
 @router.patch("/campaigns/{campaign_id}/sessions/{session_id}", response_model=SessionOut)
@@ -198,7 +228,7 @@ def player_action(campaign: CampaignDep, body: PlayerAction, db: Db) -> dict[str
     event = append_event(
         db, campaign.id, "player_action",
         {"character_id": character.id, "name": character.name, "player_id": body.player_id, "text": body.text,
-         "target": body.target},
+         "target": body.target, "mode": body.mode},
         actor_kind="player", actor_id=body.player_id, session_id=session.id,
     )
     commit(db)

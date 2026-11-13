@@ -19,8 +19,10 @@ class Script:
         self.decision: dict[str, Any] = {}
         self.narrations: list[str] = []
         self.default = "La luz de las antorchas tiembla sobre la piedra."
+        self.calls: list[tuple[list[Message], dict[str, Any] | None]] = []
 
     def __call__(self, messages: list[Message], schema: dict[str, Any] | None) -> str:
+        self.calls.append((messages, schema))
         if schema and "tipo" in schema["properties"]:
             base = {"intencion": "", "tipo": "automatica", "prueba": "ninguna", "habilidad": "ninguna",
                     "caracteristica": "ninguna", "dificultad": "media", "ventaja": "none", "hecho": "ninguno",
@@ -118,3 +120,47 @@ def test_guardia_detecta_nombres_propios() -> None:
     assert leaks("Malek os observa.", [fact]) == ["malek"]
     assert leaks("Veis una CORONA NEGRA.", [fact]) == ["corona negra"]
     assert leaks("Un altar polvoriento.", [fact]) == []
+
+
+def test_comenzar_la_aventura_y_charlar(ai_client: TestClient, script: Script) -> None:
+    t = setup_table(ai_client)
+    cid, dm = t["cid"], t["dm"]
+    first = ai_client.post(f"/api/campaigns/{cid}/scenes", json={"name": "La posada", "summary_public": "Humo y risas.",
+                           "order_index": 0}, headers=dm).json()
+    ai_client.post(f"/api/campaigns/{cid}/scenes", json={"name": "La cripta", "order_index": 1}, headers=dm)
+    ai_client.patch(f"/api/campaigns/{cid}", json={"settings": {"presentation": "El rey ha muerto."}})
+    script.narrations = ["Os reunís en la posada del Grifo… ¿Qué hacéis?"]
+    started = ai_client.post(f"/api/campaigns/{cid}/start")
+    assert started.status_code == 202
+    session = ai_client.get(f"/api/campaigns/{cid}/sessions/current").json()
+    assert session["scene_id"] == first["id"]
+    intro = narrations(ai_client, cid)[-1]
+    assert intro["kind"] == "intro" and intro["text"].endswith("¿Qué hacéis?")
+    prompt = script.calls[-1][0][-1]["content"]
+    assert "El rey ha muerto." in prompt and "Thorin" in prompt
+
+    # Hablar no pasa por el clasificador ni pide tiradas.
+    calls = len(script.calls)
+    script.narrations = ["El posadero: «Bienvenido, forastero»."]
+    action = {"character_id": t["character"]["id"], "text": "¿Hay habitaciones libres?", "mode": "talk"}
+    assert ai_client.post(f"/api/campaigns/{cid}/actions", json=action).status_code == 202
+    new_calls = script.calls[calls:]
+    assert all(schema is None for _, schema in new_calls)
+    assert narrations(ai_client, cid)[-1] == {"text": "El posadero: «Bienvenido, forastero».", "kind": "dialogue",
+                                              "character_id": t["character"]["id"]}
+    assert ai_client.get(f"/api/campaigns/{cid}/rolls", params={"status": "pending"}).json() == []
+
+
+def test_presentacion_sin_ia_y_sugerencia_solo_dm(client: TestClient) -> None:
+    t = setup_table(client)
+    cid, dm = t["cid"], t["dm"]
+    client.post(f"/api/campaigns/{cid}/scenes", json={"name": "El muelle", "summary_public": "Niebla sobre el agua."},
+                headers=dm)
+    client.patch(f"/api/campaigns/{cid}", json={"settings": {"presentation": "Llegáis a Puerto Gris."}})
+    client.post(f"/api/campaigns/{cid}/start")
+    events = client.get(f"/api/campaigns/{cid}/events").json()
+    intro = next(e["payload"] for e in events if e["type"] == "narration" and e["payload"]["kind"] == "intro")
+    assert intro["text"].startswith("Llegáis a Puerto Gris.") and "Niebla sobre el agua." in intro["text"]
+    assert "¿qué hacéis?" in intro["text"]
+    assert client.post(f"/api/campaigns/{cid}/presentation/suggest").status_code == 403
+    assert client.post(f"/api/campaigns/{cid}/presentation/suggest", headers=dm).status_code == 422

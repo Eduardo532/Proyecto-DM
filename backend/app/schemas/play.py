@@ -59,4 +59,6 @@ class PlayerAction(BaseModel):
     character_id: str
     player_id: str | None = None
     text: str = Field(min_length=1, max_length=2000)
+    # action = hacer algo (el motor decide si hay tirada); talk = hablar o preguntar, sin tiradas.
+    mode: Literal["action", "talk"] = "action"
     target: str | None = None  # elemento del mapa seleccionado, p. ej. "door:3:4" o un id de entidad
