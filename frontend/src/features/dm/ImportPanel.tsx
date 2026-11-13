@@ -4,7 +4,7 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import { useCampaignMutation } from "../../api/hooks";
 import type { CharacterDraft, DocumentInfo, ImportItem, ImportKind } from "../../api/types";
-import { Badge, Button, ErrorText, Panel } from "../../components/ui";
+import { Badge, Button, ErrorText } from "../../components/ui";
 import { ABILITIES, SKILLS } from "../../lib/rules";
 
 export const ACCEPTED_FILES = ".pdf,.zip,.png,.jpg,.jpeg,.webp,.gif,.bmp";

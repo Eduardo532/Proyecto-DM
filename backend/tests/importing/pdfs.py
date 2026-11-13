@@ -44,19 +44,21 @@ def write_pdf(path: Path, spec: PdfSpec) -> Path:
     except ImportError:  # pragma: no cover - solo en desarrollo
         return _write_reportlab(path, spec)
     doc = pymupdf.open()
-    pages = [doc.new_page(width=PAGE_W, height=PAGE_H) for _ in range(spec.pages)]
+    for _ in range(spec.pages):
+        doc.new_page(width=PAGE_W, height=PAGE_H)
     if spec.image is not None:
-        pages[0].insert_image(pages[0].rect, filename=str(spec.image))
+        doc[0].insert_image(doc[0].rect, filename=str(spec.image))
     for item in spec.texts:
         font = "hebo" if item.bold else "heit" if item.italic else "helv"
-        pages[item.page].insert_text((item.x, item.y), item.text, fontsize=item.size, fontname=font)
+        doc[item.page].insert_text((item.x, item.y), item.text, fontsize=item.size, fontname=font)
     for form in spec.fields:
         widget = pymupdf.Widget()
         widget.field_type = pymupdf.PDF_WIDGET_TYPE_TEXT
         widget.field_name = form.name
         widget.field_value = form.value
         widget.rect = pymupdf.Rect(*form.rect)
-        pages[form.page].add_widget(widget)
+        page = doc[form.page]
+        page.add_widget(widget)
     doc.save(path)
     doc.close()
     return path

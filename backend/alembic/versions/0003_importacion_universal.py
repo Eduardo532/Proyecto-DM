@@ -25,7 +25,7 @@ NEW_COLUMNS: list[tuple[str, sa.Column[object]]] = [
     ("document_asset", sa.Column("group_key", sa.String(length=200), server_default="", nullable=False)),
     ("document_asset", sa.Column("variant", sa.String(length=20), server_default="", nullable=False)),
     ("document_asset", sa.Column("meta", sa.JSON(), server_default="{}", nullable=False)),
-    ("map", sa.Column("cell_height_px", sa.Float(), nullable=True)),
+    ("map", sa.Column("cell_height_px", sa.Double(), nullable=True)),
     ("map", sa.Column("dm_background_asset_id", sa.String(length=32), nullable=True)),
 ]
 
