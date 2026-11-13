@@ -57,7 +57,7 @@ def recent_story(db: Session, campaign_id: str, limit: int = 8) -> list[str]:
         if event.type == "player_action":
             lines.append(f"{p.get('name')}: {p.get('text')}")
         elif event.type == "narration":
-            lines.append(f"DM: {_trim(str(p.get('text', '')), 500)}")
+            lines.append(f"DM: {_trim(str(p.get('text', '')), 240)}")
         elif event.type == "roll_resolved":
             lines.append(f"(Tirada: {p.get('label')} = {p.get('total')}, {p.get('outcome') or 'sin CD'})")
         else:

@@ -63,6 +63,8 @@ class OllamaProvider:
             "options": {
                 "temperature": 0.2 if schema else self.settings.llm_temperature,
                 "num_ctx": int(self.settings.llm_context_budget * 1.6),
+                # Los modelos pequeños tienden a copiar frases de la historia reciente.
+                "repeat_penalty": 1.0 if schema else 1.15,
             },
         }
         if schema is not None:

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { api } from "../../api/client";
 import {
@@ -17,7 +17,7 @@ import type { Character, GameEvent, Player, Roll } from "../../api/types";
 import { Badge, Button, Empty, ErrorText, HpBar, Input, Panel } from "../../components/ui";
 import { eventSummary, outcomeLabel } from "../../lib/events";
 import { CONDITIONS, signed } from "../../lib/rules";
-import { narrator, type VoiceStatus } from "../../lib/voice";
+import { narrator, splitForSpeech, type VoiceStatus } from "../../lib/voice";
 import { useTableStore } from "../../stores/table";
 import { useVoiceStore } from "../../stores/voice";
 
@@ -172,7 +172,7 @@ function useNarrationVoice(events: GameEvent[] | undefined) {
     if (!enabled) return;
     for (const event of fresh) {
       const p = event.payload as Record<string, unknown>;
-      narrator.speak(String(p.text ?? ""), {
+      narrator.speak(event.id, String(p.text ?? ""), {
         voice: voice || status.data?.default || "",
         speed,
         serverAvailable: Boolean(status.data?.available),
@@ -182,7 +182,15 @@ function useNarrationVoice(events: GameEvent[] | undefined) {
     }
   }, [events, enabled, voice, speed, status.data]);
   useEffect(() => {
-    if (!enabled) narrator.stop();
+    if (!enabled) {
+      narrator.stop();
+      return;
+    }
+    // Con la mesa abierta en varias ventanas, solo una lee en voz alta.
+    narrator.claim();
+    return () => {
+      narrator.release();
+    };
   }, [enabled]);
 }
 
@@ -197,7 +205,8 @@ function VoiceControls() {
         onClick={() => {
           const next = !enabled;
           setEnabled(next);
-          if (next) narrator.speak("La voz del Dungeon Master está lista.", { voice: voice || status.data?.default || "", speed, serverAvailable: Boolean(status.data?.available) });
+          if (next)
+            narrator.speak("prueba", "La voz del Dungeon Master está lista.", { voice: voice || status.data?.default || "", speed, serverAvailable: Boolean(status.data?.available) }, true);
         }}
         aria-pressed={enabled}
       >
@@ -270,31 +279,49 @@ function NarrationItem({ event }: { event: GameEvent }) {
   const p = event.payload as Record<string, unknown>;
   const status = useVoiceStatus();
   const { voice, speed } = useVoiceStore();
+  const speaking = useSyncExternalStore(narrator.subscribe, narrator.current);
+  const current = useRef<HTMLSpanElement>(null);
+  const activeIndex = speaking?.id === event.id ? speaking.index : null;
+  useEffect(() => {
+    // Sigue con la vista la frase que se está leyendo.
+    if (activeIndex !== null) current.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [activeIndex]);
   if (event.type === "narration") {
     const kind = String(p.kind ?? "");
     const speaker = p.speaker ? String(p.speaker) : null;
+    const text = String(p.text ?? "");
     const replay = () => {
       narrator.stop();
-      narrator.speak(String(p.text ?? ""), {
+      narrator.speak(event.id, text, {
         voice: voice || status.data?.default || "",
         speed,
         serverAvailable: Boolean(status.data?.available),
         serverVoices: status.data?.voices ?? [],
         speaker,
-      });
+      }, true);
     };
     return (
       <div className={`group relative mb-4 whitespace-pre-line font-serif text-xl leading-relaxed ${kind === "scene" || kind === "intro" ? "read-aloud" : ""} ${kind === "roll_prompt" ? "font-semibold text-[#7a2020]" : ""}`}>
         {speaker && <span className="mr-2 font-display text-sm text-[#7a5a20]">{speaker}:</span>}
-        {String(p.text ?? "")}
+        {activeIndex === null
+          ? text
+          : splitForSpeech(text).map((chunk, index) => (
+              <span
+                key={index}
+                ref={index === activeIndex ? current : undefined}
+                className={index === activeIndex ? "rounded bg-[#e2c97a]/70 transition-colors" : index < activeIndex ? "text-[#6b5a44]" : ""}
+              >
+                {chunk}{" "}
+              </span>
+            ))}
         <button
           type="button"
-          onClick={replay}
+          onClick={activeIndex === null ? replay : () => narrator.stop()}
           className="ml-2 align-middle text-sm text-[#7a5a20] opacity-40 hover:opacity-100 group-hover:opacity-80"
-          aria-label="Escuchar"
-          title="Escuchar"
+          aria-label={activeIndex === null ? "Escuchar" : "Callar"}
+          title={activeIndex === null ? "Escuchar" : "Callar"}
         >
-          ▶
+          {activeIndex === null ? "▶" : "⏹"}
         </button>
       </div>
     );

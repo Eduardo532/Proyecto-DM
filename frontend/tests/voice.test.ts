@@ -20,3 +20,62 @@ describe("voz del DM", () => {
     expect(voiceForSpeaker("Posadero", "em_alex", ["em_alex"])).toBe("em_alex");
   });
 });
+
+describe("cola de lectura", () => {
+  it("nunca reproduce dos trozos a la vez y al callar no deja nada sonando", async () => {
+    const { NarrationVoice } = await import("../src/lib/voice");
+    const playing = new Set<FakeAudio>();
+    let maxPlaying = 0;
+    class FakeAudio {
+      onended: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      constructor(public src: string) {}
+      play() {
+        playing.add(this);
+        maxPlaying = Math.max(maxPlaying, playing.size);
+        setTimeout(() => {
+          if (playing.has(this)) {
+            playing.delete(this);
+            this.onended?.();
+          }
+        }, 5);
+        return Promise.resolve();
+      }
+      pause() {
+        playing.delete(this);
+      }
+    }
+    const originalAudio = globalThis.Audio;
+    const originalFetch = globalThis.fetch;
+    const originalUrl = URL.createObjectURL;
+    globalThis.Audio = FakeAudio as unknown as typeof Audio;
+    globalThis.fetch = (async () => new Response(new Blob(["x"]), { status: 200 })) as typeof fetch;
+    URL.createObjectURL = () => "blob:x";
+    URL.revokeObjectURL = () => undefined;
+    try {
+      const voice = new NarrationVoice();
+      const seen: (string | null)[] = [];
+      voice.subscribe(() => seen.push(voice.current() ? `${voice.current()!.id}:${voice.current()!.index}` : null));
+      const options = { voice: "em_alex", speed: 1, serverAvailable: true };
+      voice.speak("a", "Primera frase. Segunda frase.".repeat(20), options);
+      voice.speak("b", "Otra narración que llega mientras tanto.", options);
+      voice.speak("c", "Y otra más.", options, true);
+      await new Promise((r) => setTimeout(r, 400));
+      expect(maxPlaying).toBe(1);
+      expect(seen.filter(Boolean)[0]).toBe("a:0");
+      expect(seen).toContain("c:0");
+      expect(voice.current()).toBeNull();
+
+      voice.speak("d", "Una frase larga. ".repeat(40), options);
+      await new Promise((r) => setTimeout(r, 2));
+      voice.stop();
+      await new Promise((r) => setTimeout(r, 50));
+      expect(playing.size).toBe(0);
+      expect(voice.current()).toBeNull();
+    } finally {
+      globalThis.Audio = originalAudio;
+      globalThis.fetch = originalFetch;
+      URL.createObjectURL = originalUrl;
+    }
+  });
+});
